@@ -184,6 +184,80 @@ export default function AutoScoutPage() {
     }
   };
 
+  const saveProfessionalToDatabase = async () => {
+    if (results.length === 0) return;
+
+    setIsSaving(true);
+    setSavedCount(0);
+    setLogs((prevLogs) => [...prevLogs, "Début de l'enregistrement en base de données (Professionnel)..."]);
+
+    try {
+      // Fonction pour formater les numéros de téléphone
+      const formatPhoneNumber = (phone: string) => {
+        if (!phone) return '';
+
+        // Supprimer tous les caractères non numériques
+        let cleaned = phone.replace(/\D/g, '');
+
+        // Supprimer le 0 initial si présent après le code pays
+        if (cleaned.startsWith('32') && cleaned.length > 2 && cleaned.charAt(2) === '0') {
+          cleaned = '32' + cleaned.substring(3);
+        }
+
+        // Si le numéro ne commence pas par un code pays, ajouter 32 (Belgique)
+        if (!cleaned.startsWith('32') && cleaned.startsWith('0')) {
+          cleaned = '32' + cleaned.substring(1);
+        }
+
+        return cleaned;
+      };
+
+      // Mise en forme des données selon votre schéma de base de données
+      const formattedVehicles = results.map(vehicle => ({
+        brand: vehicle.marque,
+        model: vehicle.modele,
+        price: parseFloat(vehicle.prix.replace(/[^\d]/g, '').replace(/(\d+)1,\s*5$/, '$1')),
+        year: vehicle.annee ? parseInt(vehicle.annee) : new Date().getFullYear(),
+        mileage: parseInt(vehicle.kilometrage.replace(/[^\d]/g, '')),
+        fuel_type: vehicle.carburant || '',
+        transmission: vehicle.transmission || '',
+        power: vehicle.puissance ? parseInt(vehicle.puissance) : null,
+        location: vehicle.localisation || '',
+        listing_url: vehicle.url,
+        phone: formatPhoneNumber(vehicle.telephone || ''),
+        image_url: vehicle.image_url || '',
+        contact_status: 'not_contacted',
+        seller_type: 'professionnel', // Add seller_type here
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
+      // Envoi des données à votre API
+      const response = await fetch('/api/autoscout/vehicles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ vehicles: formattedVehicles }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(`${data.savedCount} véhicules enregistrés avec succès en base de données (Professionnel)`);
+        setSavedCount(data.savedCount);
+        setLogs((prevLogs) => [...prevLogs, `✅ ${data.savedCount} véhicules enregistrés avec succès (Professionnel)`]);
+      } else {
+        throw new Error(data.error || 'Erreur lors de l\'enregistrement (Professionnel)');
+      }
+    } catch (err: any) {
+      setError("Erreur lors de l'enregistrement en base de données (Professionnel)");
+      setLogs((prevLogs) => [...prevLogs, `❌ Erreur: ${err.message}`]);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const downloadLogs = () => {
     if (logs.length === 0) return;
 
@@ -355,6 +429,15 @@ export default function AutoScoutPage() {
                       >
                         <Save className="mr-2 h-4 w-4" />
                         {isSaving ? 'Enregistrement...' : `Enregistrer en DB${savedCount > 0 ? ` (${savedCount})` : ''}`}
+                      </Button>
+                      <Button 
+                        onClick={() => saveProfessionalToDatabase()} 
+                        size="sm" 
+                        disabled={isSaving || results.length === 0}
+                        className="bg-blue-600 hover:bg-blue-700" // Using a different color for distinction
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        {isSaving ? 'Enregistrement...' : `Enregistrer Pro en DB${savedCount > 0 ? ` (${savedCount})` : ''}`}
                       </Button>
                       <Button onClick={downloadResults} size="sm">
                         Télécharger CSV

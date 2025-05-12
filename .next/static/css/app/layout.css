@@ -2242,6 +2242,12 @@ video {
 .ease-out {
   animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
 }
+.running {
+  animation-play-state: running;
+}
+.paused {
+  animation-play-state: paused;
+}
 
 :root {
   --background: 0 0% 100%;

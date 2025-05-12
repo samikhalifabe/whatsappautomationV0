@@ -34,6 +34,7 @@ export async function POST(request: Request) {
       phone: vehicle.phone || '',
       image_url: vehicle.image_url || '',
       contact_status: vehicle.contact_status || 'Not contacted',
+      seller_type: vehicle.seller_type || null, // Add seller_type here
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }));
