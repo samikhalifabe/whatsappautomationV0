@@ -6,7 +6,7 @@ import { io, Socket } from 'socket.io-client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, MessageCircle, Phone, Send, AlertCircle, Car, Info, ExternalLink, Calendar, Gauge, MapPin, Fuel, Euro, Settings, Bot } from "lucide-react";
+import { Loader2, MessageCircle, Phone, Send, AlertCircle, Car, Info, ExternalLink, Calendar, Gauge, MapPin, Fuel, Euro, Settings, Bot, ChevronDown } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -17,6 +17,14 @@ import { sendWhatsAppMessage } from "@/services/messageService";
 import { useWhatsApp } from "./WhatsAppContext";
 import { useVehicles } from "@/hooks/useVehicles";
 import type { Database } from "@/types/supabase";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"]
 
@@ -45,28 +53,30 @@ const normalizePhoneNumber = (phone: string | null): string => {
 };
 
 interface Message {
-  id: string;
+  id: string; // This should be the unique ID of the message itself (e.g., from DB or WhatsApp)
   from: string;
   to: string;
   body: string;
   timestamp: number;
   isFromMe: boolean;
   chatName: string;
-  chatId: string;
-  conversation_id?: string; // Ajouté pour les messages WebSocket
-  vehicle?: Vehicle | null; // Ajouté pour les messages WebSocket
-  message_id?: string; // Ajouté pour les messages WebSocket
+  chatId: string; // This is the identifier for the chat (e.g., phone number for individual, group ID for group)
+  conversation_id?: string; // UUID of the conversation in the DB
+  vehicle?: Vehicle | null; 
+  message_id?: string; // Original message ID from WhatsApp
 }
 
 interface ChatGroup {
-  chatId: string;
+  id: string; // UUID of the conversation from the DB
+  chatId: string; // Identifier for the chat (e.g., phone number for individual, group ID for group)
   chatName: string;
-  messages: Message[];
+  messages: Message[]; // This will store messages for the selected chat, fetched separately
   lastMessageTime: number;
-  phoneNumber: string;
+  phoneNumber: string; // The primary phone number associated with the chat
   rawPhoneNumbers: string[];
   vehicle?: Vehicle | null;
   debugInfo?: string;
+  lastMessage?: Message | null; 
 }
 
 // Composant isolé pour le champ de saisie de texte utilisant useRef pour éviter les re-rendus
@@ -127,9 +137,9 @@ const MessageInput = React.memo(({
         className="bg-[#25D366] hover:bg-[#128C7E] text-white"
       >
         {sending ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
-          <Send className="h-4 w-4" />
+          <Send className="mr-2 h-4 w-4" />
         )}
       </Button>
     </div>
@@ -178,7 +188,11 @@ const WhatsAppConversations: React.FC = () => {
   const [conversations, setConversations] = useState<ChatGroup[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedChat, setSelectedChat] = useState<string | null>(null);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null); 
+  const [selectedConversationUUID, setSelectedConversationUUID] = useState<string | null>(null); 
+  const [messagesForSelectedChat, setMessagesForSelectedChat] = useState<Message[]>([]); 
+  const [loadingMessages, setLoadingMessages] = useState<boolean>(false); 
+  const [updatingConversationState, setUpdatingConversationState] = useState<boolean>(false); // New state for state update loading
   
   // Message sending state with debounced update
   const [messageText, setMessageText] = useState<string>('');
@@ -217,37 +231,33 @@ const WhatsAppConversations: React.FC = () => {
       randomizeDelay: true,
       showTypingIndicator: true
     },
-    unavailabilityKeywords: [], // Initialize as empty array
-    pauseBotOnPriceOffer: true // Default to true
+    unavailabilityKeywords: [], 
+    pauseBotOnPriceOffer: true 
   });
   const [keywordInput, setKeywordInput] = useState<string>("");
-  const [unavailabilityKeywordInput, setUnavailabilityKeywordInput] = useState<string>(""); // State for the single input field
+  const [unavailabilityKeywordInput, setUnavailabilityKeywordInput] = useState<string>(""); 
   const [updatingAIConfig, setUpdatingAIConfig] = useState<boolean>(false);
 
   // Envoyer un message - mémorisé pour éviter les re-rendus inutiles
   const handleSendMessage = React.useCallback(async (text: string) => {
-    if (!selectedChat || !text.trim()) return;
+    if (!selectedConversationUUID || !text.trim()) return;
 
-    const selectedChatData = conversations.find(c => c.chatId === selectedChat);
+    const selectedChatData = conversations.find(c => c.id === selectedConversationUUID);
     if (!selectedChatData) return;
 
     setSendingMessage(true);
     setSendError(null);
 
     try {
-      // Utiliser le véhicule déjà associé (peut être null)
       const matchingVehicle = selectedChatData.vehicle;
-
-      // Utiliser le service d'envoi de message
       const result = await sendWhatsAppMessage(
         selectedChatData.phoneNumber,
         text,
-        matchingVehicle, // Peut être null, le service doit gérer ce cas
+        matchingVehicle, 
         user?.id || '00000000-0000-0000-0000-000000000000'
       );
 
       if (result.success) {
-        // Ajouter le message à la conversation
         const newMessage: Message = {
           id: result.messageId || Date.now().toString(),
           from: 'me',
@@ -256,23 +266,21 @@ const WhatsAppConversations: React.FC = () => {
           timestamp: Date.now() / 1000,
           isFromMe: true,
           chatName: selectedChatData.chatName,
-          chatId: selectedChat
+          chatId: selectedChatData.chatId,
+          conversation_id: result.conversationId 
         };
-
-        // Mettre à jour les conversations
-        setConversations(prevConversations => 
-          prevConversations.map(chat => 
-            chat.chatId === selectedChat 
+        setMessagesForSelectedChat(prevMessages => [...prevMessages, newMessage]);
+        setConversations(prevConversations =>
+          prevConversations.map(chat =>
+            chat.id === selectedConversationUUID
               ? {
-                  ...chat, 
-                  messages: [...chat.messages, newMessage],
-                  lastMessageTime: newMessage.timestamp
+                  ...chat,
+                  lastMessageTime: newMessage.timestamp,
+                  lastMessage: newMessage 
                 }
               : chat
-          )
+          ).sort((a, b) => b.lastMessageTime - a.lastMessageTime)
         );
-
-        // La réinitialisation du champ est maintenant gérée dans le composant MessageInput
       } else {
         console.error('Échec de l\'envoi du message:', result.error);
         setSendError(result.error || 'Échec de l\'envoi du message');
@@ -283,23 +291,17 @@ const WhatsAppConversations: React.FC = () => {
     } finally {
       setSendingMessage(false);
     }
-  }, [selectedChat, conversations, user]);
+  }, [selectedConversationUUID, conversations, user]);
 
   // Mettre à jour les statuts de contact des véhicules
   const updateContactedVehicles = async () => {
     try {
       setUpdatingContacts(true);
       setUpdateSuccess(false);
-      
       console.log('Mise à jour des véhicules contactés...');
-      const response = await axios.get('http://localhost:3001/api/whatsapp/update-contacted-vehicles');
-      console.log('Réponse mise à jour:', response.data);
-      
+      await axios.get('http://localhost:3001/api/whatsapp/update-contacted-vehicles');
       setUpdateSuccess(true);
-      
-      // Rafraîchir les conversations après la mise à jour
-      await fetchConversations();
-      
+      await fetchDbConversations(); // Refresh DB conversations after update
     } catch (err: any) {
       console.error('Erreur lors de la mise à jour des véhicules contactés:', err);
       setError(`Impossible de mettre à jour les véhicules contactés: ${err.message}`);
@@ -308,119 +310,17 @@ const WhatsAppConversations: React.FC = () => {
     }
   };
 
-  // Récupérer toutes les conversations WhatsApp
+  // Récupérer toutes les conversations WhatsApp (from WhatsApp Web)
   const fetchAllConversations = async () => {
+    // This function seems to fetch from WhatsApp Web and then save to DB.
+    // It might be better to call fetchDbConversations after this to ensure UI consistency.
     try {
       setLoadingAllConversations(true);
       setError(null);
-      
       console.log('Récupération de toutes les conversations WhatsApp...');
-      const response = await axios.get('http://localhost:3001/api/whatsapp/all-conversations');
-      console.log('Réponse conversations complètes:', response.data);
-      
-      // Vérifier la structure des données reçues
-      if (response.data && response.data.conversations && Array.isArray(response.data.conversations)) {
-        // Convertir les conversations en format ChatGroup
-        const allChatGroups: ChatGroup[] = response.data.conversations.map((conversation: any) => {
-          // Extraire les numéros de téléphone
-          const phoneNumbers = [
-            conversation.contact.number
-          ].filter(phone => phone && phone !== 'Inconnu' && phone !== 'me');
-          
-          // Normaliser les numéros de téléphone
-          const normalizedPhones = phoneNumbers.map(normalizePhoneNumber);
-          
-          // Trouver le véhicule correspondant
-          let matchingVehicle = null;
-          let matchDebugInfo = '';
-          
-          // Parcourir tous les véhicules pour trouver une correspondance
-          for (const vehicle of vehicles) {
-            const vehicleNormalizedPhone = normalizePhoneNumber(vehicle.phone || '');
-            
-            if (normalizedPhones.includes(vehicleNormalizedPhone) && vehicleNormalizedPhone) {
-              matchingVehicle = vehicle;
-              matchDebugInfo = `Correspondance trouvée! Chat: ${normalizedPhones.join(', ')} | Véhicule: ${vehicleNormalizedPhone}`;
-              break;
-            }
-          }
-          
-          if (!matchingVehicle) {
-            matchDebugInfo = `Aucune correspondance trouvée pour les numéros: ${normalizedPhones.join(', ')}`;
-          }
-
-          return {
-            chatId: conversation.chatId,
-            chatName: conversation.chatName || conversation.contact.name || 'Chat sans nom',
-            messages: conversation.messages.sort((a: Message, b: Message) => a.timestamp - b.timestamp),
-            lastMessageTime: Math.max(...conversation.messages.map((m: Message) => m.timestamp)),
-            phoneNumber: conversation.contact.number.includes('@c.us') ? conversation.contact.number : `${conversation.contact.number}@c.us`,
-            rawPhoneNumbers: phoneNumbers,
-            vehicle: matchingVehicle,
-            debugInfo: `Numéros: ${phoneNumbers.join(', ')} | Normalisés: ${normalizedPhones.join(', ')} | ${matchDebugInfo}`
-          };
-        });
-        
-        // Trier les conversations par dernier message (plus récent en premier)
-        allChatGroups.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
-        
-        // Fusionner avec les conversations existantes au lieu de les remplacer
-        setConversations(prevConversations => {
-          // Créer une copie des conversations existantes
-          const mergedConversations = [...prevConversations];
-          
-          // Pour chaque nouvelle conversation
-          for (const newChat of allChatGroups) {
-            // Vérifier si cette conversation existe déjà
-            const existingIndex = mergedConversations.findIndex(c => c.chatId === newChat.chatId);
-            
-            if (existingIndex === -1) {
-              // Si la conversation n'existe pas, l'ajouter
-              mergedConversations.push(newChat);
-            } else {
-              // Si la conversation existe, fusionner les messages
-              const existingChat = mergedConversations[existingIndex];
-              
-              // Créer un ensemble d'IDs de messages existants pour une recherche rapide
-              const existingMessageIds = new Set(existingChat.messages.map(m => m.id));
-              
-              // Ajouter uniquement les nouveaux messages
-              for (const msg of newChat.messages) {
-                if (!existingMessageIds.has(msg.id)) {
-                  existingChat.messages.push(msg);
-                }
-              }
-              
-              // Trier les messages par timestamp
-              existingChat.messages.sort((a, b) => a.timestamp - b.timestamp);
-              
-              // Mettre à jour le dernier message
-              if (existingChat.messages.length > 0) {
-                existingChat.lastMessageTime = Math.max(
-                  existingChat.lastMessageTime,
-                  existingChat.messages[existingChat.messages.length - 1].timestamp
-                );
-              }
-              
-              // Mettre à jour dans le tableau
-              mergedConversations[existingIndex] = existingChat;
-            }
-          }
-          
-          // Trier les conversations fusionnées par dernier message
-          return mergedConversations.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
-        });
-        
-        setUpdateSuccess(true);
-        
-        // Sélectionner automatiquement la première conversation
-        if (allChatGroups.length > 0 && !selectedChat) {
-          setSelectedChat(allChatGroups[0].chatId);
-        }
-      } else {
-        console.error('Format de données inattendu:', response.data);
-        setError(`Format de données inattendu dans la réponse de l'API`);
-      }
+      await axios.get('http://localhost:3001/api/whatsapp/all-conversations');
+      setUpdateSuccess(true); // Assuming success if no error
+      await fetchDbConversations(); // Refresh from DB after fetching all from WhatsApp
     } catch (err: any) {
       console.error('Erreur lors de la récupération de toutes les conversations:', err);
       setError(`Impossible de récupérer toutes les conversations: ${err.message}`);
@@ -429,127 +329,16 @@ const WhatsAppConversations: React.FC = () => {
     }
   };
 
-  // Récupérer les messages et les regrouper par conversation
+  // Récupérer les messages et les regrouper par conversation (from WhatsApp Web - limited fetch)
   const fetchConversations = async () => {
+    // This function fetches recent messages from WhatsApp Web.
+    // It might be better to call fetchDbConversations after this to ensure UI consistency.
     try {
       setLoading(true);
-      console.log('Récupération des messages...');
-      const response = await axios.get('http://localhost:3001/api/messages');
-      console.log('Réponse messages:', response.data);
-      
-      // Regrouper les messages par chatId
-      const messagesGroupedByChat: { [key: string]: Message[] } = {};
-      
-      response.data.forEach((msg: Message) => {
-        const chatId = msg.chatId;
-        if (!messagesGroupedByChat[chatId]) {
-          messagesGroupedByChat[chatId] = [];
-        }
-        messagesGroupedByChat[chatId].push(msg);
-      });
-      
-      // Créer les groupes de chat avec métadonnées
-      const chatGroups: ChatGroup[] = Object.keys(messagesGroupedByChat).map(chatId => {
-        const messages = messagesGroupedByChat[chatId];
-        const firstMsg = messages[0]; // Supposons que les messages sont déjà triés
-        
-        // Extraire les numéros de téléphone
-        const phoneNumbers = [
-          firstMsg.from.replace('@c.us', ''),
-          firstMsg.to.replace('@c.us', '')
-        ].filter(phone => phone && phone !== 'Inconnu' && phone !== 'me');
-        
-        // Normaliser les numéros de téléphone
-        const normalizedPhones = phoneNumbers.map(normalizePhoneNumber);
-        
-        // Trouver le véhicule correspondant
-        let matchingVehicle = null;
-        let matchDebugInfo = '';
-        
-        // Parcourir tous les véhicules pour trouver une correspondance
-        for (const vehicle of vehicles) {
-          const vehicleNormalizedPhone = normalizePhoneNumber(vehicle.phone || '');
-          
-          if (normalizedPhones.includes(vehicleNormalizedPhone) && vehicleNormalizedPhone) {
-            matchingVehicle = vehicle;
-            matchDebugInfo = `Correspondance trouvée! Chat: ${normalizedPhones.join(', ')} | Véhicule: ${vehicleNormalizedPhone}`;
-            break;
-          }
-        }
-        
-        if (!matchingVehicle) {
-          matchDebugInfo = `Aucune correspondance trouvée pour les numéros: ${normalizedPhones.join(', ')}`;
-        }
-
-        return {
-          chatId: chatId,
-          chatName: firstMsg.chatName || 'Chat sans nom',
-          messages: messages.sort((a, b) => a.timestamp - b.timestamp), // Trier par date croissante
-          lastMessageTime: Math.max(...messages.map(m => m.timestamp)),
-          phoneNumber: firstMsg.from.includes('@c.us') ? firstMsg.from : 
-                      (firstMsg.to && firstMsg.to.includes('@c.us') ? firstMsg.to : 'Inconnu'),
-          rawPhoneNumbers: phoneNumbers,
-          vehicle: matchingVehicle,
-          debugInfo: `Numéros: ${phoneNumbers.join(', ')} | Normalisés: ${normalizedPhones.join(', ')} | ${matchDebugInfo}`
-        };
-      });
-      
-      // Trier les conversations par dernier message (plus récent en premier)
-      chatGroups.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
-      
-      // Fusionner avec les conversations existantes au lieu de les remplacer
-      setConversations(prevConversations => {
-        // Créer une copie des conversations existantes
-        const mergedConversations = [...prevConversations];
-        
-        // Pour chaque nouvelle conversation
-        for (const newChat of chatGroups) {
-          // Vérifier si cette conversation existe déjà
-          const existingIndex = mergedConversations.findIndex(c => c.chatId === newChat.chatId);
-          
-          if (existingIndex === -1) {
-            // Si la conversation n'existe pas, l'ajouter
-            mergedConversations.push(newChat);
-          } else {
-            // Si la conversation existe, fusionner les messages
-            const existingChat = mergedConversations[existingIndex];
-            
-            // Créer un ensemble d'IDs de messages existants pour une recherche rapide
-            const existingMessageIds = new Set(existingChat.messages.map(m => m.id));
-            
-            // Ajouter uniquement les nouveaux messages
-            for (const msg of newChat.messages) {
-              if (!existingMessageIds.has(msg.id)) {
-                existingChat.messages.push(msg);
-              }
-            }
-            
-            // Trier les messages par timestamp
-            existingChat.messages.sort((a, b) => a.timestamp - b.timestamp);
-            
-            // Mettre à jour le dernier message
-            if (existingChat.messages.length > 0) {
-              existingChat.lastMessageTime = Math.max(
-                existingChat.lastMessageTime,
-                existingChat.messages[existingChat.messages.length - 1].timestamp
-              );
-            }
-            
-            // Mettre à jour dans le tableau
-            mergedConversations[existingIndex] = existingChat;
-          }
-        }
-        
-        // Trier les conversations fusionnées par dernier message
-        return mergedConversations.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
-      });
-      
-      setError(null);
-      
-      // Sélectionner automatiquement la première conversation
-      if (chatGroups.length > 0 && !selectedChat) {
-        setSelectedChat(chatGroups[0].chatId);
-      }
+      setError(null); 
+      console.log('Récupération des messages (limited fetch)...');
+      await axios.get('http://localhost:3001/api/messages');
+      await fetchDbConversations(); // Refresh from DB after fetching recent from WhatsApp
     } catch (err: any) {
       console.error('Erreur lors de la récupération des messages :', err);
       setError(`Impossible de récupérer les messages: ${err.message}`);
@@ -563,51 +352,30 @@ const WhatsAppConversations: React.FC = () => {
     try {
       setLoadingDbConversations(true);
       setError(null);
-      
       console.log('Récupération des conversations depuis Supabase...');
       const response = await axios.get('http://localhost:3001/api/conversations');
       console.log('Réponse conversations DB:', response.data);
       
       if (response.data && Array.isArray(response.data)) {
-        // Convertir les conversations de la DB en format ChatGroup
-        const dbChatGroups: ChatGroup[] = response.data.map((conv: any) => {
-          // Extraire les messages
-          const messages = conv.messages ? conv.messages.map((msg: any) => ({
-            id: msg.message_id || msg.id,
-            from: msg.is_from_me ? 'me' : conv.phoneNumber + '@c.us',
-            to: msg.is_from_me ? conv.phoneNumber + '@c.us' : 'me',
-            body: msg.body,
-            timestamp: new Date(msg.timestamp).getTime() / 1000,
-            isFromMe: msg.is_from_me,
-            chatName: conv.vehicle?.brand + ' ' + conv.vehicle?.model || 'Chat sans nom',
-            chatId: conv.chatId || conv.id
-          })) : [];
-          
-          // Trouver le dernier message
-          const lastMessageTime = messages.length > 0 
-            ? Math.max(...messages.map((m: any) => m.timestamp))
-            : new Date(conv.lastMessageAt).getTime() / 1000;
-          
-          return {
-            chatId: conv.chatId || conv.id,
-            chatName: conv.vehicle?.brand + ' ' + conv.vehicle?.model || 'Chat sans nom',
-            messages: messages,
-            lastMessageTime: lastMessageTime,
-            phoneNumber: conv.phoneNumber + '@c.us',
-            rawPhoneNumbers: [conv.phoneNumber],
-            vehicle: conv.vehicle,
-            debugInfo: `Conversation DB - ID: ${conv.id}, Phone: ${conv.phoneNumber}`
-          };
-        });
+        const dbChatGroups: ChatGroup[] = response.data.map((conv: any) => ({
+          id: conv.id, // This is the UUID
+          chatId: conv.chatId || conv.id, // Fallback to UUID if chatId is missing
+          chatName: conv.vehicle?.brand + ' ' + conv.vehicle?.model || conv.phoneNumber || 'Chat sans nom',
+          messages: [], // Messages will be fetched on selection
+          lastMessageTime: conv.lastMessage ? new Date(conv.lastMessage.timestamp).getTime() / 1000 : new Date(conv.lastMessageAt).getTime() / 1000,
+          phoneNumber: conv.phoneNumber.includes('@c.us') ? conv.phoneNumber : `${conv.phoneNumber}@c.us`,
+          rawPhoneNumbers: [conv.phoneNumber],
+          vehicle: conv.vehicle,
+          lastMessage: conv.lastMessage,
+          debugInfo: `Conversation DB - ID: ${conv.id}, Phone: ${conv.phoneNumber}, State: ${conv.state}`
+        }));
         
-        // Trier les conversations par dernier message (plus récent en premier)
         dbChatGroups.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
-        
         setConversations(dbChatGroups);
         
-        // Sélectionner automatiquement la première conversation
-        if (dbChatGroups.length > 0 && !selectedChat) {
-          setSelectedChat(dbChatGroups[0].chatId);
+        if (dbChatGroups.length > 0 && !selectedConversationUUID) {
+          setSelectedChatId(dbChatGroups[0].chatId);
+          setSelectedConversationUUID(dbChatGroups[0].id);
         }
       }
     } catch (err: any) {
@@ -618,103 +386,100 @@ const WhatsAppConversations: React.FC = () => {
     }
   };
 
+  // Fetch messages for the selected chat
+  const fetchMessagesForSelectedChat = async (conversationUUID: string) => {
+    if (!conversationUUID) {
+      setMessagesForSelectedChat([]);
+      return;
+    }
+    
+    setLoadingMessages(true);
+    setSendError(null); 
+    
+    try {
+      console.log(`Fetching messages for conversation UUID: ${conversationUUID}`);
+      const response = await axios.get(`http://localhost:3001/api/conversations/${conversationUUID}`);
+      console.log(`Data received from /api/conversations/${conversationUUID}:`, response.data); 
+      
+      if (response.data && response.data.messages && Array.isArray(response.data.messages)) {
+        const fetchedMessages: Message[] = response.data.messages.map((msg: any) => ({
+          id: msg.message_id || msg.id,
+          from: msg.is_from_me ? 'me' : response.data.phoneNumber + '@c.us', 
+          to: msg.is_from_me ? response.data.phoneNumber + '@c.us' : 'me',
+          body: msg.body,
+          timestamp: new Date(msg.timestamp).getTime() / 1000,
+          isFromMe: msg.is_from_me,
+          chatName: response.data.vehicle?.brand + ' ' + response.data.vehicle?.model || 'Chat sans nom', 
+          chatId: response.data.chatId || response.data.id, 
+          conversation_id: response.data.id,
+          vehicle: response.data.vehicle
+        }));
+        
+        fetchedMessages.sort((a, b) => a.timestamp - b.timestamp);
+        setMessagesForSelectedChat(fetchedMessages);
+      } else {
+        console.error(`Failed to fetch messages for chat ${conversationUUID} or invalid format:`, response.data);
+        setMessagesForSelectedChat([]);
+      }
+    } catch (err: any) {
+      console.error(`Error fetching messages for chat ${conversationUUID}:`, err);
+      setMessagesForSelectedChat([]);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
   // Initialiser la connexion WebSocket
   useEffect(() => {
-    // Créer une nouvelle connexion socket si elle n'existe pas déjà
     if (!socketRef.current) {
       console.log('Initialisation de la connexion WebSocket...');
-      
-      // Créer une nouvelle connexion socket
       socketRef.current = io('http://localhost:3001');
       
-      // Gérer la connexion
       socketRef.current.on('connect', () => {
         console.log('WebSocket connecté!');
         setSocketConnected(true);
       });
       
-      // Gérer la déconnexion
       socketRef.current.on('disconnect', () => {
         console.log('WebSocket déconnecté!');
         setSocketConnected(false);
       });
       
-      // Gérer les erreurs
       socketRef.current.on('connect_error', (error: any) => {
         console.error('Erreur de connexion WebSocket:', error);
         setSocketConnected(false);
       });
       
-      // Gérer le message de bienvenue
       socketRef.current.on('welcome', (data: any) => {
         console.log('Message de bienvenue reçu:', data);
       });
       
-      // Gérer les nouveaux messages
       socketRef.current.on('new_message', (message: Message) => {
         console.log('Nouveau message reçu via WebSocket:', message);
-        console.log('Détails complets du message WebSocket:', JSON.stringify(message, null, 2));
         
-        // Ajouter le message aux conversations existantes
         setConversations(prevConversations => {
-          // Créer une copie des conversations existantes
           const updatedConversations = [...prevConversations];
-          
-          // Trouver la conversation correspondante avec une logique plus flexible
-          console.log('Recherche de conversation pour le message:', message.id);
-          console.log('Conversations disponibles:', updatedConversations.map(c => ({ 
-            chatId: c.chatId, 
-            phoneNumber: c.phoneNumber,
-            rawPhoneNumbers: c.rawPhoneNumbers
-          })));
-          
-          // Essayer plusieurs méthodes pour trouver la conversation correspondante
-          let conversationIndex = updatedConversations.findIndex(c => c.chatId === message.chatId);
-          
-          // Si pas trouvé par chatId, essayer par conversation_id
-          if (conversationIndex === -1 && message.conversation_id) {
-            console.log('Tentative de correspondance par conversation_id:', message.conversation_id);
-            conversationIndex = updatedConversations.findIndex(c => c.chatId === message.conversation_id);
+          let conversationIndex = updatedConversations.findIndex(c => c.id === message.conversation_id);
+
+          if (conversationIndex === -1) { // Fallback if conversation_id is not matching, try chatId
+             conversationIndex = updatedConversations.findIndex(c => c.chatId === message.chatId);
           }
-          
-          // Si toujours pas trouvé, essayer par numéro de téléphone
-          if (conversationIndex === -1) {
-            const messagePhone = message.from !== 'me' ? message.from : message.to;
-            console.log('Tentative de correspondance par numéro de téléphone:', messagePhone);
-            conversationIndex = updatedConversations.findIndex(c => c.phoneNumber === messagePhone);
-          }
-          
-          console.log('Résultat de la recherche de conversation:', conversationIndex);
-          
+
           if (conversationIndex !== -1) {
-            // Si la conversation existe, ajouter le message
             const conversation = updatedConversations[conversationIndex];
-            
-            // Vérifier si le message existe déjà
-            const messageExists = conversation.messages.some(m => m.id === message.id);
+            const messageExists = conversation.messages.some(m => m.id === message.id || m.message_id === message.message_id);
             
             if (!messageExists) {
-              console.log('Ajout du message à la conversation existante:', conversation.chatId);
-              
-              // Ajouter le message à la conversation
               conversation.messages.push(message);
-              
-              // Trier les messages par timestamp
               conversation.messages.sort((a, b) => a.timestamp - b.timestamp);
-              
-              // Mettre à jour le dernier message
-              conversation.lastMessageTime = Math.max(
-                conversation.lastMessageTime,
-                message.timestamp
-              );
-              
-              // Mettre à jour la conversation dans le tableau
+              conversation.lastMessageTime = message.timestamp;
+              conversation.lastMessage = message; // Update last message object
               updatedConversations[conversationIndex] = conversation;
-              
-              // Afficher une notification si ce n'est pas la conversation sélectionnée
-              if (conversation.chatId !== selectedChat) {
+
+              if (selectedConversationUUID === conversation.id) {
+                setMessagesForSelectedChat(prev => [...prev, message].sort((a,b) => a.timestamp - b.timestamp));
+              } else {
                 setNewMessageNotification(true);
-                // Jouer un son de notification (optionnel)
                 try {
                   const audio = new Audio('/notification.mp3');
                   audio.play().catch(e => console.log('Erreur lors de la lecture du son:', e));
@@ -722,30 +487,16 @@ const WhatsAppConversations: React.FC = () => {
                   console.log('Erreur lors de la création du son:', e);
                 }
               }
-            } else {
-              console.log('Message déjà existant dans la conversation, ignoré');
             }
           } else {
-            // Si la conversation n'existe pas, créer une nouvelle conversation
-            console.log('Aucune conversation trouvée, création d\'une nouvelle conversation');
-            
-            // Déterminer le numéro de téléphone et le nom de la conversation
+            // Create new conversation if it doesn't exist
             const phoneNumber = message.from !== 'me' ? message.from : message.to;
             let chatName = message.chatName || 'Nouvelle conversation';
-            
-            // Si le message contient des informations sur le véhicule, utiliser ces informations
             if (message.vehicle) {
               chatName = `${message.vehicle.brand} ${message.vehicle.model}`;
             }
-            
-            console.log('Création d\'une nouvelle conversation avec:', {
-              chatId: message.chatId || message.conversation_id || phoneNumber,
-              chatName,
-              phoneNumber
-            });
-            
-            // Créer une nouvelle conversation
             const newConversation: ChatGroup = {
+              id: message.conversation_id || message.chatId, // Use conversation_id if available
               chatId: message.chatId || message.conversation_id || phoneNumber,
               chatName,
               messages: [message],
@@ -753,31 +504,17 @@ const WhatsAppConversations: React.FC = () => {
               phoneNumber,
               rawPhoneNumbers: [phoneNumber.replace('@c.us', '')],
               vehicle: message.vehicle || null,
-              debugInfo: `Conversation créée automatiquement via WebSocket - Message ID: ${message.id}`
+              lastMessage: message,
+              debugInfo: `Conversation créée via WebSocket - Msg ID: ${message.id}`
             };
-            
-            // Ajouter la nouvelle conversation
             updatedConversations.push(newConversation);
-            console.log('Nouvelle conversation ajoutée:', newConversation.chatId);
-            
-            // Afficher une notification
             setNewMessageNotification(true);
-            // Jouer un son de notification (optionnel)
-            try {
-              const audio = new Audio('/notification.mp3');
-              audio.play().catch(e => console.log('Erreur lors de la lecture du son:', e));
-            } catch (e) {
-              console.log('Erreur lors de la création du son:', e);
-            }
           }
-          
-          // Trier les conversations par dernier message (plus récent en premier)
           return updatedConversations.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
         });
       });
     }
     
-    // Nettoyer la connexion socket lors du démontage du composant
     return () => {
       if (socketRef.current) {
         console.log('Fermeture de la connexion WebSocket...');
@@ -785,13 +522,16 @@ const WhatsAppConversations: React.FC = () => {
         socketRef.current = null;
       }
     };
-  }, [selectedChat]); // Dépendance à selectedChat pour mettre à jour les notifications
+  }, [selectedConversationUUID]); 
 
-  // Memoize the selected conversation messages to prevent unnecessary re-renders
-  const selectedConversationMessages = React.useMemo(() => {
-    const selectedChatData = conversations.find(c => c.chatId === selectedChat);
-    return selectedChatData?.messages || [];
-  }, [conversations, selectedChat]);
+  // Fetch messages for the selected chat when selectedConversationUUID changes
+  useEffect(() => {
+    if (selectedConversationUUID) {
+      fetchMessagesForSelectedChat(selectedConversationUUID);
+    } else {
+      setMessagesForSelectedChat([]); 
+    }
+  }, [selectedConversationUUID]); 
   
   // Récupérer la configuration de l'IA
   const fetchAIConfig = async () => {
@@ -799,21 +539,15 @@ const WhatsAppConversations: React.FC = () => {
       const response = await axios.get<{ success: boolean, config: AIConfig & { unavailabilityKeywords?: string[] } }>('http://localhost:3001/api/whatsapp/ai-config');
       if (response.data.success && response.data.config) {
         const fetchedConfig = response.data.config;
-        // Ensure typingDelays exists with defaults if missing
         const sanitizedDelays = fetchedConfig.typingDelays || {
           enabled: false, minDelay: 2000, maxDelay: 15000, wordsPerMinute: 40, randomizeDelay: true, showTypingIndicator: true
         };
         setAIConfig({
           ...fetchedConfig,
           typingDelays: sanitizedDelays,
-          // Ensure unavailabilityKeywords is an array, default to empty if missing
           unavailabilityKeywords: Array.isArray(fetchedConfig.unavailabilityKeywords) ? fetchedConfig.unavailabilityKeywords : [],
           pauseBotOnPriceOffer: typeof fetchedConfig.pauseBotOnPriceOffer === 'boolean' ? fetchedConfig.pauseBotOnPriceOffer : true
         });
-        // No longer need to join/set for textarea
-        // setUnavailabilityKeywordInput(
-        //  Array.isArray(fetchedConfig.unavailabilityKeywords) ? fetchedConfig.unavailabilityKeywords.join('\n') : ''
-        // );
       } else {
          console.error('Failed to fetch AI config or invalid format:', response.data);
          setError('Impossible de récupérer la configuration IA: Format invalide');
@@ -828,13 +562,7 @@ const WhatsAppConversations: React.FC = () => {
   const updateAIConfig = async () => {
     try {
       setUpdatingAIConfig(true);
-      
-      // Payload now directly uses the array from aiConfig state
-      const payload = {
-        ...aiConfig,
-        // unavailabilityKeywords is already an array in aiConfig state
-      };
-      
+      const payload = { ...aiConfig };
       console.log("Sending AI Config Payload:", payload);
       const response = await axios.post('http://localhost:3001/api/whatsapp/ai-config', payload);
       
@@ -875,7 +603,6 @@ const WhatsAppConversations: React.FC = () => {
   const addUnavailabilityKeyword = () => {
     const newKeyword = unavailabilityKeywordInput.trim();
     if (newKeyword) {
-      // Ensure unavailabilityKeywords exists and is an array before adding
       const currentKeywords = Array.isArray(aiConfig.unavailabilityKeywords) ? aiConfig.unavailabilityKeywords : [];
       if (!currentKeywords.includes(newKeyword)) {
         setAIConfig({
@@ -883,7 +610,7 @@ const WhatsAppConversations: React.FC = () => {
           unavailabilityKeywords: [...currentKeywords, newKeyword]
         });
       }
-      setUnavailabilityKeywordInput(''); // Clear input field
+      setUnavailabilityKeywordInput(''); 
     }
   };
 
@@ -896,28 +623,17 @@ const WhatsAppConversations: React.FC = () => {
   };
 
   useEffect(() => {
-    // Charger d'abord les conversations de la DB, puis les conversations récentes
     fetchDbConversations();
-    
-    // Charger la configuration de l'IA
     fetchAIConfig();
-    
-    // Désactivation du rafraîchissement automatique pour éviter les plantages
-    // const interval = setInterval(fetchConversations, 30000);
-    // return () => clearInterval(interval);
   }, []);
 
   // Formatage de la date
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
     const now = new Date();
-    
-    // Si c'est aujourd'hui, afficher uniquement l'heure
     if (date.toDateString() === now.toDateString()) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
-    
-    // Sinon, afficher la date et l'heure
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
@@ -930,8 +646,6 @@ const WhatsAppConversations: React.FC = () => {
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Conversations WhatsApp</h1>
-        
-        {/* Indicateur de connexion WebSocket */}
         <div className="flex items-center">
           <div className={`w-3 h-3 rounded-full mr-2 ${socketConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
           <span className="text-sm text-slate-500">
@@ -1434,12 +1148,13 @@ const WhatsAppConversations: React.FC = () => {
                 <div className="max-h-[600px] overflow-y-auto">
                   {conversations.map((chat) => (
                       <div 
-                        key={chat.chatId}
+                        key={chat.id} // Use conversation UUID as key
                         className={`p-4 border-b cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors
-                          ${selectedChat === chat.chatId ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
+                          ${selectedConversationUUID === chat.id ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
                         onClick={() => {
-                          setSelectedChat(chat.chatId);
-                          setNewMessageNotification(false); // Effacer la notification lors de la sélection
+                          setSelectedChatId(chat.chatId); // Keep this for display if needed
+                          setSelectedConversationUUID(chat.id); // Set the UUID for fetching
+                          setNewMessageNotification(false); 
                         }}
                       >
                         <div className="flex justify-between items-start">
@@ -1476,15 +1191,15 @@ const WhatsAppConversations: React.FC = () => {
                                     <Calendar className="h-3 w-3 mr-1" />
                                     {chat.vehicle.year}
                                   </div>
-                                  <div className="text-slate-600 flex items-center">
+                                  <div className="flex items-center">
                                     <Gauge className="h-3 w-3 mr-1" />
-                                    {chat.vehicle.mileage.toLocaleString()} km
+                                    <span>{chat.vehicle.mileage.toLocaleString()} km</span>
                                   </div>
-                                  <div className="text-slate-600 flex items-center">
+                                  <div className="flex items-center">
                                     <Fuel className="h-3 w-3 mr-1" />
-                                    {chat.vehicle.fuel_type}
+                                    <span>{chat.vehicle.fuel_type}</span>
                                   </div>
-                                  <div className="text-slate-600 flex items-center col-span-2 truncate">
+                                  <div className="flex items-center col-span-2 truncate">
                                     <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
                                     <span className="truncate">{chat.vehicle.location}</span>
                                   </div>
@@ -1496,7 +1211,7 @@ const WhatsAppConversations: React.FC = () => {
                                     href={chat.vehicle.listing_url} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="text-blue-500 hover:text-blue-700 text-xs flex items-center mt-2"
+                                    className="text-blue-500 hover:text-blue-700 text-xs flex items-center"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <ExternalLink className="h-3 w-3 mr-1" />
@@ -1518,15 +1233,15 @@ const WhatsAppConversations: React.FC = () => {
                             )}
                           </div>
                           <div className="text-xs text-slate-500 dark:text-slate-400 ml-2 flex-shrink-0">
-                            {formatDate(chat.lastMessageTime)}
+                            {chat.lastMessage ? formatDate(chat.lastMessage.timestamp) : formatDate(chat.lastMessageTime)}
                           </div>
                         </div>
                         {/* Last message - Even more prominent */}
                         <p className="text-sm font-medium text-slate-800 dark:text-slate-100 line-clamp-2 mt-2 border-t pt-2 border-slate-200 dark:border-slate-700 clear-both">
-                          {chat.messages.length > 0 ? (
+                          {chat.lastMessage ? (
                             <>
-                              <span className="font-bold">{chat.messages[chat.messages.length - 1].isFromMe ? 'Vous: ' : ''}</span>
-                              {chat.messages[chat.messages.length - 1].body}
+                              <span className="font-bold">{chat.lastMessage.isFromMe ? 'Vous: ' : ''}</span>
+                              {chat.lastMessage.body}
                             </>
                           ) : ""}
                         </p>
@@ -1538,18 +1253,18 @@ const WhatsAppConversations: React.FC = () => {
           </div>
           
           <div className="md:col-span-2">
-            {selectedChat ? (
+            {selectedConversationUUID ? ( // Use selectedConversationUUID to determine if a chat is selected
               <Card className="h-full flex flex-col">
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle>
-                        {conversations.find(c => c.chatId === selectedChat)?.chatName || 'Conversation'}
+                        {conversations.find(c => c.id === selectedConversationUUID)?.chatName || 'Conversation'}
                       </CardTitle>
                       <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center">
                         <Phone className="h-3 w-3 mr-1" />
                         {(() => {
-                          const chat = conversations.find(c => c.chatId === selectedChat);
+                          const chat = conversations.find(c => c.id === selectedConversationUUID);
                           if (!chat) return '';
                           
                           return chat.vehicle 
@@ -1559,9 +1274,32 @@ const WhatsAppConversations: React.FC = () => {
                       </div>
                     </div>
                     
+                    {/* Conversation State Selector */}
+                    {selectedConversationUUID && (
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor="conversation-state" className="text-sm">État:</Label>
+                        <Select 
+                          value={conversations.find(c => c.id === selectedConversationUUID)?.state || 'active'}
+                          onValueChange={handleStateChange}
+                          disabled={updatingConversationState}
+                        >
+                          <SelectTrigger id="conversation-state" className="w-[150px]">
+                            <SelectValue placeholder="Sélectionner état" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="negotiation">Négociation</SelectItem>
+                            <SelectItem value="completed">Terminée</SelectItem>
+                            <SelectItem value="archived">Archivée</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {updatingConversationState && <Loader2 className="h-4 w-4 animate-spin" />}
+                      </div>
+                    )}
+
                     {/* Vehicle Details in Header */}
                     {(() => {
-                      const chat = conversations.find(c => c.chatId === selectedChat);
+                      const chat = conversations.find(c => c.id === selectedConversationUUID);
                       if (!chat || !chat.vehicle) return null;
                       
                       return (
@@ -1596,7 +1334,7 @@ const WhatsAppConversations: React.FC = () => {
                   
                   {/* Extended Vehicle Info */}
                   {(() => {
-                    const chat = conversations.find(c => c.chatId === selectedChat);
+                    const chat = conversations.find(c => c.id === selectedConversationUUID);
                     if (!chat || !chat.vehicle) return null;
                     
                     return (
@@ -1629,14 +1367,20 @@ const WhatsAppConversations: React.FC = () => {
                 </CardHeader>
                 <CardContent className="flex-grow overflow-y-auto pt-0 flex flex-col">
                   <div className="flex flex-col space-y-3 pb-3 flex-grow">
-                    {/* Afficher seulement les 50 derniers messages pour améliorer les performances */}
-                    {selectedConversationMessages.slice(-50).map((msg) => (
-                      <MessageItem 
-                        key={msg.id} 
-                        message={msg} 
-                        formatDate={formatDate} 
-                      />
-                    ))}
+                    {/* Display messages for the selected chat */}
+                    {loadingMessages ? (
+                      <div className="text-center text-muted-foreground">Chargement des messages...</div>
+                    ) : messagesForSelectedChat.length > 0 ? (
+                      messagesForSelectedChat.map((msg) => (
+                        <MessageItem 
+                          key={msg.id} 
+                          message={msg} 
+                          formatDate={formatDate} 
+                        />
+                      ))
+                    ) : (
+                      <div className="text-center text-muted-foreground">Aucun message dans cette conversation.</div>
+                    )}
                   </div>
                   
                   {status !== 'connected' && (
@@ -1683,3 +1427,16 @@ const WhatsAppConversations: React.FC = () => {
 };
 
 export default WhatsAppConversations;
+
+// Function to update conversation state via API
+const updateConversationState = async (conversationId: string, newState: string) => {
+  try {
+    console.log(`Attempting to update conversation ${conversationId} state to ${newState}`);
+    const response = await axios.patch(`http://localhost:3001/api/conversations/${conversationId}/state`, { state: newState });
+    console(`Conversation state updated successfully:`, response.data);
+    return response.data.success;
+  } catch (error: any) {
+    console.error(`Error updating conversation ${conversationId} state to ${newState}:`, error);
+    return false;
+  }
+};

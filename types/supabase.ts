@@ -6,6 +6,9 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// Define the ENUM type for conversation states
+export type ConversationState = "active" | "negotiation" | "manual" | "completed"
+
 export interface Database {
   public: {
     Tables: {
@@ -15,11 +18,18 @@ export interface Database {
           vehicle_id: string | null
           phone_number: string
           chat_id: string | null
-          status: string
+          status: string // This might be deprecated or used alongside the new state
           last_message_at: string
           created_at: string
           updated_at: string
           user_id: string | null
+          // New state management fields
+          state: ConversationState | null // Use the ENUM type, allow null initially if needed
+          last_state_change: string | null
+          state_change_reason: string | null
+          detected_price: number | null
+          price_detected_at: string | null
+          price_detected_message_id: string | null // UUID stored as string
         }
         Insert: {
           id?: string
@@ -31,6 +41,13 @@ export interface Database {
           created_at?: string
           updated_at?: string
           user_id?: string | null
+          // New state management fields
+          state?: ConversationState | null
+          last_state_change?: string | null
+          state_change_reason?: string | null
+          detected_price?: number | null
+          price_detected_at?: string | null
+          price_detected_message_id?: string | null
         }
         Update: {
           id?: string
@@ -42,15 +59,22 @@ export interface Database {
           created_at?: string
           updated_at?: string
           user_id?: string | null
+          // New state management fields
+          state?: ConversationState | null
+          last_state_change?: string | null
+          state_change_reason?: string | null
+          detected_price?: number | null
+          price_detected_at?: string | null
+          price_detected_message_id?: string | null
         }
       }
       messages: {
         Row: {
-          id: string
+          id: string // Changed to string to match UUID reference
           conversation_id: string
           body: string
           is_from_me: boolean
-          message_id: string | null
+          message_id: string | null // WhatsApp message ID
           timestamp: string
           created_at: string
           user_id: string | null
@@ -95,6 +119,7 @@ export interface Database {
           updated_at: string
           user_id: string | null
           contact_status: string | null
+          seller_type: "particulier" | "professionnel" | null // Added from previous task
         }
         Insert: {
           id?: string
@@ -114,6 +139,7 @@ export interface Database {
           updated_at?: string
           user_id?: string | null
           contact_status?: string | null
+          seller_type?: "particulier" | "professionnel" | null // Added from previous task
         }
         Update: {
           id?: string
@@ -133,6 +159,7 @@ export interface Database {
           updated_at?: string
           user_id?: string | null
           contact_status?: string | null
+          seller_type?: "particulier" | "professionnel" | null // Added from previous task
         }
       }
       contact_records: {
@@ -208,6 +235,87 @@ export interface Database {
           user_id?: string
         }
       }
+      // Assuming you might have this table based on previous code snippets
+      price_offers: {
+        Row: {
+          id: string
+          conversation_id: string
+          vehicle_id: string | null
+          user_id: string | null
+          message_id: string | null // Link to the message table
+          offered_price: number
+          offer_currency: string | null
+          status: string | null // e.g., 'pending', 'accepted', 'rejected'
+          notes: string | null
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          vehicle_id?: string | null
+          user_id?: string | null
+          message_id?: string | null
+          offered_price: number
+          offer_currency?: string | null
+          status?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          vehicle_id?: string | null
+          user_id?: string | null
+          message_id?: string | null
+          offered_price?: number
+          offer_currency?: string | null
+          status?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+      }
+      // Assuming you might have this table based on previous code snippets
+      ai_config: {
+        Row: {
+          id: string
+          enabled: boolean
+          respond_to_all: boolean
+          system_prompt: string | null
+          keywords: string[] | null
+          typing_delays: Json | null // Assuming JSONB storage for nested object
+          unavailability_keywords: string[] | null
+          pause_bot_on_price_offer: boolean
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          enabled?: boolean
+          respond_to_all?: boolean
+          system_prompt?: string | null
+          keywords?: string[] | null
+          typing_delays?: Json | null
+          unavailability_keywords?: string[] | null
+          pause_bot_on_price_offer?: boolean
+          active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          enabled?: boolean
+          respond_to_all?: boolean
+          system_prompt?: string | null
+          keywords?: string[] | null
+          typing_delays?: Json | null
+          unavailability_keywords?: string[] | null
+          pause_bot_on_price_offer?: boolean
+          active?: boolean
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -216,6 +324,10 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
+      // Define the ENUM type if you created it in SQL
+      conversation_state: "active" | "negotiation" | "manual" | "completed"
+    }
+    CompositeTypes: {
       [_ in never]: never
     }
   }

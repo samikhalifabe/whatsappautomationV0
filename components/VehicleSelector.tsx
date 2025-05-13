@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Car, MapPin, Banknote, Gauge, Fuel, Phone, MessageCircle } from "lucide-react"
+import { Car, MapPin, Banknote, Gauge, Fuel, Phone, MessageCircle, Building } from "lucide-react"
 import { useVehicles } from "@/hooks/useVehicles"
 import type { Database } from "@/types/supabase"
 
@@ -22,19 +22,32 @@ export default function VehicleSelector({ onVehiclesSelected }: VehicleSelectorP
   const [selectedVehicles, setSelectedVehicles] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [contactStatusFilter, setContactStatusFilter] = useState<"all" | "contacted" | "not_contacted">("all")
+  const [sellerTypeFilter, setSellerTypeFilter] = useState<"all" | "particulier" | "professionnel">("all")
 
-  // Filter vehicles based on search term and contact status
+  // Filter vehicles based on search term, contact status, and seller type
   const filteredVehicles = vehicles.filter(
-    (vehicle) =>
-      ((vehicle.brand ? vehicle.brand.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
-      (vehicle.model ? vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
-      (vehicle.location ? vehicle.location.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
-      (vehicle.phone && vehicle.phone.includes(searchTerm))) &&
-      (
+    (vehicle) => {
+      // Keyword search across multiple fields
+      const matchesKeyword = searchTerm === "" || 
+        Object.entries(vehicle).some(([key, value]) => {
+          // Only search string and number fields
+          if (typeof value === 'string' || typeof value === 'number') {
+            return String(value).toLowerCase().includes(searchTerm.toLowerCase())
+          }
+          return false
+        });
+
+      const matchesContactStatus = 
         contactStatusFilter === "all" || 
         (contactStatusFilter === "contacted" && vehicle.contact_status === "contacted") ||
-        (contactStatusFilter === "not_contacted" && vehicle.contact_status !== "contacted")
-      )
+        (contactStatusFilter === "not_contacted" && vehicle.contact_status !== "contacted");
+
+      const matchesSellerType = 
+        sellerTypeFilter === "all" || 
+        vehicle.seller_type === sellerTypeFilter;
+
+      return matchesKeyword && matchesContactStatus && matchesSellerType;
+    }
   )
 
   // Filter vehicles to only include those with phone numbers
@@ -72,40 +85,70 @@ export default function VehicleSelector({ onVehiclesSelected }: VehicleSelectorP
         </div>
       </CardHeader>
       <CardContent className="p-4">
-        <div className="mb-4 flex space-x-2">
+        <div className="mb-4 flex flex-col space-y-2">
           <Input
             placeholder="Rechercher un véhicule..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-9 text-sm flex-grow"
+            className="h-9 text-sm"
           />
-          <div className="flex space-x-2">
-            <Button 
-              variant={contactStatusFilter === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setContactStatusFilter("all")}
-              className="h-9"
-            >
-              Tous
-            </Button>
-            <Button 
-              variant={contactStatusFilter === "contacted" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setContactStatusFilter("contacted")}
-              className="h-9"
-            >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Contactés
-            </Button>
-            <Button 
-              variant={contactStatusFilter === "not_contacted" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setContactStatusFilter("not_contacted")}
-              className="h-9"
-            >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Non contactés
-            </Button>
+          <div className="flex space-x-2 flex-wrap">
+            <div className="flex space-x-2">
+              <Button 
+                variant={contactStatusFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setContactStatusFilter("all")}
+                className="h-9"
+              >
+                Tous
+              </Button>
+              <Button 
+                variant={contactStatusFilter === "contacted" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setContactStatusFilter("contacted")}
+                className="h-9"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Contactés
+              </Button>
+              <Button 
+                variant={contactStatusFilter === "not_contacted" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setContactStatusFilter("not_contacted")}
+                className="h-9"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Non contactés
+              </Button>
+            </div>
+            <div className="flex space-x-2">
+              <Button 
+                variant={sellerTypeFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSellerTypeFilter("all")}
+                className="h-9"
+              >
+                Tous
+              </Button>
+              <Button 
+                variant={sellerTypeFilter === "particulier" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSellerTypeFilter("particulier")}
+                className="h-9"
+              >
+                <Phone className="h-4 w-4 mr-2" />
+                Particulier
+              </Button>
+              <Button 
+                variant={sellerTypeFilter === "professionnel" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSellerTypeFilter("professionnel")}
+                className="h-9"
+              >
+                <Building className="h-4 w-4 mr-2" />
+                Professionnel
+              </Button>
+            </div>
           </div>
         </div>
 
