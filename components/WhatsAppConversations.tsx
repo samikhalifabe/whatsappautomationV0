@@ -43,7 +43,6 @@ interface AIConfig {
     showTypingIndicator: boolean; // Afficher l'indicateur "est en train d'écrire..."
   };
   unavailabilityKeywords?: string[]; // Added for unavailability phrases
-  pauseBotOnPriceOffer?: boolean; // Added to control bot pause on price offer
 }
 
 // Simplified phone number normalization
@@ -1042,24 +1041,8 @@ const WhatsAppConversations: React.FC = () => {
                 </div>
               </div>
 
-              {/* Switch for pausing bot on price offer */}
-              <div className="flex items-center justify-between pt-4 border-t mt-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="pause-on-price">Arrêter le bot si un prix est offert</Label>
-                  <p className="text-sm text-slate-500">
-                    Si activé, le bot cessera de répondre après qu'un prospect ait mentionné un prix.
-                  </p>
-                </div>
-                <Switch
-                  id="pause-on-price"
-                  checked={aiConfig.pauseBotOnPriceOffer}
-                  onCheckedChange={(checked) => setAIConfig({...aiConfig, pauseBotOnPriceOffer: checked})}
-                  disabled={!aiConfig.enabled}
-                />
-              </div>
-
               {/* Tag-style input for Unavailability Keywords */}
-              <div className="space-y-2 pt-4 border-t mt-4">
+              <div className="space-y-2">
                 <Label>Phrases de non-disponibilité</Label>
                 <p className="text-sm text-slate-500">
                   Si un message entrant contient l'une de ces phrases (insensible à la casse et aux accents), l'IA ne répondra pas et le statut du véhicule sera mis à "vendu".
