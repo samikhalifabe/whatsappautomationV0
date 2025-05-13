@@ -43,6 +43,7 @@ interface AIConfig {
     showTypingIndicator: boolean; // Afficher l'indicateur "est en train d'écrire..."
   };
   unavailabilityKeywords?: string[]; // Added for unavailability phrases
+  pauseBotOnPriceOffer?: boolean; // Ajout de la propriété manquante
 }
 
 // Simplified phone number normalization
@@ -76,6 +77,7 @@ interface ChatGroup {
   vehicle?: Vehicle | null;
   debugInfo?: string;
   lastMessage?: Message | null; 
+  state?: string; // Ajout de la propriété state
 }
 
 // Composant isolé pour le champ de saisie de texte utilisant useRef pour éviter les re-rendus
@@ -237,6 +239,34 @@ const WhatsAppConversations: React.FC = () => {
   const [unavailabilityKeywordInput, setUnavailabilityKeywordInput] = useState<string>(""); 
   const [updatingAIConfig, setUpdatingAIConfig] = useState<boolean>(false);
 
+  // Gérer le changement d'état de la conversation
+  const handleStateChange = async (newState: string) => {
+    if (!selectedConversationUUID) return;
+
+    setUpdatingConversationState(true);
+    setError(null);
+
+    try {
+      const success = await updateConversationState(selectedConversationUUID, newState);
+      if (success) {
+        setConversations(prevConversations =>
+          prevConversations.map(chat =>
+            chat.id === selectedConversationUUID
+              ? { ...chat, state: newState }
+              : chat
+          )
+        );
+      } else {
+        setError("Impossible de mettre à jour l'état de la conversation.");
+      }
+    } catch (err: any) {
+      console.error("Erreur lors de la mise à jour de l'état de la conversation:", err);
+      setError(err.message || "Erreur lors de la mise à jour de l'état.");
+    } finally {
+      setUpdatingConversationState(false);
+    }
+  };
+
   // Envoyer un message - mémorisé pour éviter les re-rendus inutiles
   const handleSendMessage = React.useCallback(async (text: string) => {
     if (!selectedConversationUUID || !text.trim()) return;
@@ -366,7 +396,8 @@ const WhatsAppConversations: React.FC = () => {
           rawPhoneNumbers: [conv.phoneNumber],
           vehicle: conv.vehicle,
           lastMessage: conv.lastMessage,
-          debugInfo: `Conversation DB - ID: ${conv.id}, Phone: ${conv.phoneNumber}, State: ${conv.state}`
+          debugInfo: `Conversation DB - ID: ${conv.id}, Phone: ${conv.phoneNumber}, State: ${conv.state}`,
+          state: conv.state // Initialisation de la propriété state
         }));
         
         dbChatGroups.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
@@ -1416,7 +1447,7 @@ const updateConversationState = async (conversationId: string, newState: string)
   try {
     console.log(`Attempting to update conversation ${conversationId} state to ${newState}`);
     const response = await axios.patch(`http://localhost:3001/api/conversations/${conversationId}/state`, { state: newState });
-    console(`Conversation state updated successfully:`, response.data);
+    console.log(`Conversation state updated successfully:`, response.data); // Correction: console.log au lieu de console()
     return response.data.success;
   } catch (error: any) {
     console.error(`Error updating conversation ${conversationId} state to ${newState}:`, error);
