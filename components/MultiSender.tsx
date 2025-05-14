@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -13,217 +13,40 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import type { MessageTemplate } from "@/types/message"
-import type { SendStatus } from "@/types/message"
-import type { Database } from "@/types/supabase"
 import { Send, AlertCircle, CheckCircle, Clock, Settings, RefreshCw, Car, Phone } from "lucide-react"
-import axios from "axios"
 import MessageTemplates from "./MessageTemplates"
 import VehicleSelector from "./VehicleSelector"
-import { useWhatsApp } from "./WhatsAppContext"
-import { sendWhatsAppMessage } from "@/services/messageService"
-
-// Temporary user ID until authentication is implemented
-const TEMP_USER_ID = "00000000-0000-0000-0000-000000000000"
-
-type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"]
+import { useMultiSender } from "@/hooks/useMultiSender" // Import the new hook
 
 export default function MultiSender() {
-  const { status, refreshStatus, lastChecked } = useWhatsApp()
-  const [vehicles, setVehicles] = useState<Vehicle[]>([])
-  const [message, setMessage] = useState("")
-  const [sendStatus, setSendStatus] = useState<SendStatus[]>([])
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [progress, setProgress] = useState(0)
+  const {
+    status,
+    lastChecked,
+    vehicles,
+    message,
+    setMessage,
+    sendStatus,
+    isProcessing,
+    progress,
+    result,
+    isRefreshing,
+    minDelay,
+    setMinDelay,
+    maxDelay,
+    setMaxDelay,
+    maxPerHour,
+    setMaxPerHour,
+    randomizeOrder,
+    setRandomizeOrder,
+    avoidDuplicates,
+    setAvoidDuplicates,
+    handleRefreshStatus,
+    handleVehiclesSelected,
+    handleTemplateSelected,
+    sendMessages,
+  } = useMultiSender() // Use the new hook
+
   const [activeTab, setActiveTab] = useState("compose")
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-
-  // Paramètres anti-spam
-  const [minDelay, setMinDelay] = useState(5)
-  const [maxDelay, setMaxDelay] = useState(15)
-  const [maxPerHour, setMaxPerHour] = useState(30)
-  const [randomizeOrder, setRandomizeOrder] = useState(true)
-  const [avoidDuplicates, setAvoidDuplicates] = useState(true)
-
-  const BASE_URL = "http://localhost:3001/api/whatsapp"
-
-  // Vérifier le statut au chargement du composant
-  useEffect(() => {
-    const checkStatus = async () => {
-      await refreshStatus()
-    }
-    checkStatus()
-  }, [])
-
-  const handleRefreshStatus = async () => {
-    setIsRefreshing(true)
-    await refreshStatus()
-    setIsRefreshing(false)
-  }
-
-  const handleVehiclesSelected = (selectedVehicles: Vehicle[]) => {
-    // Filter out vehicles without phone numbers
-    const vehiclesWithPhone = selectedVehicles.filter(vehicle => vehicle.phone)
-    setVehicles(vehiclesWithPhone)
-    setActiveTab("compose")
-  }
-
-  const handleTemplateSelected = (template: MessageTemplate) => {
-    // Remplacer les variables par des valeurs par défaut pour l'aperçu
-    let templateContent = template.content
-    templateContent = templateContent.replace(/{{[ ]*(\w+)[ ]*}}/g, "___")
-    setMessage(templateContent)
-    setActiveTab("compose")
-  }
-
-  const sendMessages = async () => {
-    if (vehicles.length === 0 || !message) {
-      setResult({
-        success: false,
-        message: "Veuillez sélectionner des véhicules et saisir un message",
-      })
-      return
-    }
-
-    // Vérifier à nouveau le statut avant d'envoyer
-    await refreshStatus()
-
-    if (status !== "connected") {
-      setResult({
-        success: false,
-        message: "WhatsApp n'est pas connecté. Veuillez scanner le QR code dans l'onglet 'Envoi simple'.",
-      })
-      return
-    }
-
-    setIsProcessing(true)
-    setProgress(0)
-    setSendStatus([])
-    setResult(null)
-
-    // Copie des véhicules pour pouvoir les randomiser sans affecter l'original
-    let vehiclesToProcess = [...vehicles]
-
-    // Randomiser l'ordre si l'option est activée
-    if (randomizeOrder) {
-      vehiclesToProcess = vehiclesToProcess.sort(() => Math.random() - 0.5)
-    }
-
-    // Limiter le nombre de messages par heure
-    if (vehiclesToProcess.length > maxPerHour) {
-      setResult({
-        success: false,
-        message: `Trop de véhicules sélectionnés. Maximum: ${maxPerHour} par heure.`,
-      })
-      setIsProcessing(false)
-      return
-    }
-
-    let successCount = 0
-    let failCount = 0
-    let lastMessage = ""
-
-    for (let i = 0; i < vehiclesToProcess.length; i++) {
-      const vehicle = vehiclesToProcess[i]
-      
-      if (!vehicle.phone) {
-        continue; // Skip vehicles without phone numbers
-      }
-
-      // Mettre à jour la progression
-      setProgress(Math.round((i / vehiclesToProcess.length) * 100))
-
-      // Personnaliser le message pour chaque véhicule
-      let personalizedMessage = message
-      // Remplacer les variables par les valeurs du véhicule
-      personalizedMessage = personalizedMessage.replace(/{{[ ]*marque[ ]*}}/g, vehicle.brand)
-      personalizedMessage = personalizedMessage.replace(/{{[ ]*modele[ ]*}}/g, vehicle.model)
-      personalizedMessage = personalizedMessage.replace(/{{[ ]*prix[ ]*}}/g, vehicle.price.toString())
-      personalizedMessage = personalizedMessage.replace(/{{[ ]*annee[ ]*}}/g, vehicle.year.toString())
-      personalizedMessage = personalizedMessage.replace(/{{[ ]*kilometrage[ ]*}}/g, vehicle.mileage.toString())
-      personalizedMessage = personalizedMessage.replace(/{{[ ]*url[ ]*}}/g, vehicle.listing_url)
-
-      // Éviter les messages identiques consécutifs si l'option est activée
-      if (avoidDuplicates && personalizedMessage === lastMessage) {
-        personalizedMessage += " " // Ajouter un espace pour rendre le message différent
-      }
-
-      lastMessage = personalizedMessage
-
-      // Ajouter à la liste des statuts
-      setSendStatus((prev) => [
-        ...prev,
-        {
-          contactId: vehicle.id,
-          contactName: `${vehicle.brand} ${vehicle.model}`,
-          contactNumber: vehicle.phone || "",
-          status: "pending",
-          timestamp: new Date(),
-        },
-      ])
-
-      try {
-        console.log(`Envoi du message pour ${vehicle.brand} ${vehicle.model} (${vehicle.phone})...`)
-
-        // Option 1: Utiliser l'API directement
-        const { data } = await axios.post(`${BASE_URL}/send`, {
-          number: vehicle.phone,
-          message: personalizedMessage,
-        })
-
-        // Option 2: Utiliser le service de messagerie (décommentez pour utiliser)
-        // const result = await sendWhatsAppMessage(
-        //   vehicle.phone || "",
-        //   personalizedMessage,
-        //   vehicle,
-        //   TEMP_USER_ID
-        // )
-        // const data = { messageId: result.messageId || "unknown" }
-
-        console.log("Réponse du serveur:", data)
-
-        // Mettre à jour le statut
-        setSendStatus((prev) =>
-          prev.map((status) =>
-            status.contactId === vehicle.id ? { ...status, status: "success", messageId: data.messageId } : status,
-          ),
-        )
-
-        successCount++
-
-        // Attendre un délai aléatoire entre minDelay et maxDelay secondes
-        if (i < vehiclesToProcess.length - 1) {
-          const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1) + minDelay) * 1000
-          console.log(`Attente de ${delay / 1000} secondes avant le prochain envoi...`)
-          await new Promise((resolve) => setTimeout(resolve, delay))
-        }
-      } catch (error: any) {
-        console.error("Erreur lors de l'envoi:", error)
-
-        // Mettre à jour le statut en cas d'erreur
-        setSendStatus((prev) =>
-          prev.map((status) =>
-            status.contactId === vehicle.id
-              ? {
-                  ...status,
-                  status: "error",
-                  error: error.response?.data?.error || "Erreur d'envoi",
-                }
-              : status,
-          ),
-        )
-        failCount++
-      }
-    }
-
-    // Finaliser
-    setProgress(100)
-    setIsProcessing(false)
-    setResult({
-      success: successCount > 0,
-      message: `Envoi terminé: ${successCount} message(s) envoyé(s), ${failCount} échec(s)`,
-    })
-  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -285,7 +108,7 @@ export default function MultiSender() {
         </TabsContent>
 
         <TabsContent value="templates" className="m-0">
-          <MessageTemplates onSelectTemplate={handleTemplateSelected} />
+          <MessageTemplates onSelectTemplate={(template) => handleTemplateSelected(template.content)} />
         </TabsContent>
 
         <TabsContent value="compose" className="m-0">
@@ -346,9 +169,9 @@ export default function MultiSender() {
                           <div key={vehicle.id} className="flex items-center text-xs mb-2">
                             {vehicle.image_url ? (
                               <div className="h-6 w-6 rounded overflow-hidden mr-2 flex-shrink-0">
-                                <img 
-                                  src={vehicle.image_url} 
-                                  alt={`${vehicle.brand} ${vehicle.model}`} 
+                                <img
+                                  src={vehicle.image_url}
+                                  alt={`${vehicle.brand} ${vehicle.model}`}
                                   className="h-full w-full object-cover"
                                   onError={(e) => {
                                     // Replace broken image with placeholder
