@@ -2,15 +2,7 @@
 
 import React from 'react';
 
-// Simplified Message interface for this component
-// This should eventually be imported from a central types file
-interface Message {
-  id: string;
-  body: string;
-  timestamp: number;
-  isFromMe: boolean;
-  // Add other relevant fields if needed by this component, e.g., status for sent/delivered/read
-}
+import { Message } from "../../types/messages";
 
 interface MessageItemProps {
   message: Message;

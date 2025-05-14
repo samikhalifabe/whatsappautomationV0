@@ -17,6 +17,7 @@ import { Send, AlertCircle, CheckCircle, Clock, Settings, RefreshCw, Car, Phone 
 import MessageTemplates from "./MessageTemplates"
 import VehicleSelector from "./VehicleSelector"
 import { useMultiSender } from "@/hooks/useMultiSender" // Import the new hook
+import { Vehicle } from "../types/vehicles"
 
 export default function MultiSender() {
   const {

@@ -13,11 +13,8 @@ import { Car, MessageSquare, Phone, MapPin, Banknote, Gauge, Fuel } from "lucide
 import { useVehicles } from "@/hooks/useVehicles"
 import { useContacts } from "@/hooks/useContacts"
 import { useContactHistory } from "@/hooks/useContactHistory"
-import { getOrCreateContactForVehicle } from "@/services/messageService"
 import VehicleConversation from "./VehicleConversation"
-import type { Database } from "@/types/supabase"
-
-type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"]
+import { Vehicle } from "../types/vehicles"
 
 // Temporary user ID until authentication is implemented
 const TEMP_USER_ID = "00000000-0000-0000-0000-000000000000"
@@ -56,7 +53,7 @@ export default function VehicleManager() {
     }
   }
 
-  const openContactDialog = async (vehicle: Vehicle) => {
+  const openContactDialog = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle)
     setContactDialogOpen(true)
   }

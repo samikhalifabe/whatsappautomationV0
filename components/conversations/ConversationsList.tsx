@@ -3,29 +3,9 @@
 import React from 'react';
 import ConversationItem from './ConversationItem'; // Import the new component
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Database } from "@/types/supabase";
-
-// Define types locally for now, to be centralized later
-type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
-interface Message {
-  id: string;
-  body: string;
-  timestamp: number;
-  isFromMe: boolean;
-}
-interface ChatGroup {
-  id: string;
-  chatId: string;
-  chatName: string;
-  messages: Message[];
-  lastMessageTime: number;
-  phoneNumber: string;
-  rawPhoneNumbers: string[];
-  vehicle?: Vehicle | null;
-  debugInfo?: string;
-  lastMessage?: Message | null;
-  state?: string;
-}
+import { Message } from "../../types/messages";
+import { ChatGroup } from "../../types/conversations";
+import { Vehicle } from "../../types/vehicles";
 
 interface ConversationsListProps {
   conversations: ChatGroup[];

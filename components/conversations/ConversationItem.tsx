@@ -3,30 +3,9 @@
 import React from 'react';
 import { Phone } from "lucide-react";
 import VehicleDetails from './VehicleDetails'; // Using the new component
-import type { Database } from "@/types/supabase";
-
-// Define types locally for now, to be centralized later
-type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
-interface Message {
-  id: string;
-  body: string;
-  timestamp: number;
-  isFromMe: boolean;
-  // Other fields if necessary for display
-}
-interface ChatGroup {
-  id: string;
-  chatId: string;
-  chatName: string;
-  messages: Message[]; // Though not directly used for rendering list item, part of the type
-  lastMessageTime: number;
-  phoneNumber: string;
-  rawPhoneNumbers: string[];
-  vehicle?: Vehicle | null;
-  debugInfo?: string;
-  lastMessage?: Message | null;
-  state?: string;
-}
+import { Message } from "../../types/messages";
+import { ChatGroup } from "../../types/conversations";
+import { Vehicle } from "../../types/vehicles";
 
 interface ConversationItemProps {
   chat: ChatGroup;

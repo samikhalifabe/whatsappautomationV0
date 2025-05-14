@@ -13,22 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added for success/error messages
 
 // Interface pour la configuration de l'IA
-export interface AIConfig {
-  enabled: boolean;
-  respondToAll: boolean;
-  keywords: string[];
-  systemPrompt: string;
-  typingDelays?: {
-    enabled: boolean;
-    minDelay: number;
-    maxDelay: number;
-    wordsPerMinute: number;
-    randomizeDelay: boolean;
-    showTypingIndicator: boolean;
-  };
-  unavailabilityKeywords?: string[];
-  pauseBotOnPriceOffer?: boolean;
-}
+import { AIConfig } from "../../types/ai-config";
 
 interface AIConfigPanelProps {
   // Props can be added here if needed, e.g., an onToggle callback

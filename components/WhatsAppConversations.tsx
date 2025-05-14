@@ -16,32 +16,9 @@ import { ConversationsList, ConversationDetail } from "@/components/conversation
 
 // Define types locally for now, to be centralized later
 // These types should match the ones defined in the hooks and components
-interface AppMessage {
-  id: string;
-  from: string;
-  to: string;
-  body: string;
-  timestamp: number;
-  isFromMe: boolean;
-  chatName: string;
-  chatId: string;
-  conversation_id?: string;
-  vehicle?: any | null; // Use 'any' or import the specific Vehicle type if needed here
-  message_id?: string;
-}
-interface ChatGroup {
-  id: string; // Conversation UUID
-  chatId: string;
-  chatName: string;
-  messages: AppMessage[];
-  lastMessageTime: number;
-  phoneNumber: string;
-  rawPhoneNumbers: string[];
-  vehicle?: any | null; // Use 'any' or import the specific Vehicle type if needed here
-  debugInfo?: string;
-  lastMessage?: AppMessage | null;
-  state?: string;
-}
+import { AppMessage } from "../types/messages";
+import { ChatGroup } from "../types/conversations";
+import { Vehicle } from "../types/vehicles";
 
 
 const WhatsAppConversations: React.FC = () => {

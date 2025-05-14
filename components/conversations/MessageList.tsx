@@ -2,26 +2,11 @@
 
 import React, { useEffect, useRef } from 'react';
 import MessageItem from './MessageItem'; // Import the new component
-import type { Database } from "@/types/supabase"; // Assuming global Supabase types
-
-// Define types locally for now, to be centralized later
-type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
-interface Message {
-  id: string;
-  from: string;
-  to: string;
-  body: string;
-  timestamp: number;
-  isFromMe: boolean;
-  chatName: string;
-  chatId: string;
-  conversation_id?: string;
-  vehicle?: Vehicle | null;
-  message_id?: string;
-}
+import { AppMessage } from "../../types/messages";
+import { Vehicle } from "../../types/vehicles";
 
 interface MessageListProps {
-  messages: Message[];
+  messages: AppMessage[];
   loadingMessages: boolean;
   formatDate: (timestamp: number) => string;
 }

@@ -8,9 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Car, MapPin, Banknote, Gauge, Fuel, Phone, MessageCircle, Building } from "lucide-react"
 import { useVehicles } from "@/hooks/useVehicles"
-import type { Database } from "@/types/supabase"
-
-type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"]
+import { Vehicle } from "../types/vehicles"
 
 interface VehicleSelectorProps {
   onVehiclesSelected: (vehicles: Vehicle[]) => void

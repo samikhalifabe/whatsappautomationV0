@@ -10,20 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { getConversations, getConversation, sendWhatsAppMessage } from "@/services/messageService";
 import { useWhatsApp } from "./WhatsAppContext";
-import type { Database } from "@/types/supabase";
-
-type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
-type Message = Database["public"]["Tables"]["messages"]["Row"];
-
-interface FormattedConversation {
-  id: string;
-  phoneNumber: string;
-  chatId: string;
-  lastMessageAt: string;
-  vehicle: Vehicle | null;
-  messages: Message[];
-  lastMessage: Message | null;
-}
+import { FormattedConversation } from "../types/conversations";
+import { Message } from "../types/messages";
+import { Vehicle } from "../types/vehicles";
 
 const ConversationsView: React.FC = () => {
   const { user } = useAuth();
@@ -50,12 +39,33 @@ const ConversationsView: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const data = await getConversations();
-      setConversations(data);
+      const data: any[] = await getConversations(); // Use any for now to handle incoming data structure
+      
+      const formattedConversations: FormattedConversation[] = data.map(conv => ({
+        id: conv.id,
+        phoneNumber: conv.phone_number,
+        chatId: conv.chat_id,
+        lastMessageAt: conv.last_message_at,
+        vehicle: conv.vehicle, // Assuming vehicle structure matches
+        messages: conv.messages.map((msg: any) => ({ // Map messages
+          id: msg.id,
+          body: msg.body,
+          timestamp: new Date(msg.timestamp).getTime() / 1000, // Convert timestamp string to number
+          isFromMe: msg.is_from_me, // Map is_from_me to isFromMe
+        })),
+        lastMessage: conv.last_message ? { // Map lastMessage if exists
+          id: conv.last_message.id,
+          body: conv.last_message.body,
+          timestamp: new Date(conv.last_message.timestamp).getTime() / 1000,
+          isFromMe: conv.last_message.is_from_me,
+        } : null,
+      }));
+
+      setConversations(formattedConversations);
       
       // Select the first conversation by default
-      if (data.length > 0 && !selectedConversation) {
-        await selectConversation(data[0].id);
+      if (formattedConversations.length > 0 && !selectedConversation) {
+        await selectConversation(formattedConversations[0].id);
       }
     } catch (err: any) {
       console.error('Error fetching conversations:', err);
@@ -70,8 +80,29 @@ const ConversationsView: React.FC = () => {
     try {
       setLoading(true);
       
-      const conversation = await getConversation(conversationId);
-      setSelectedConversation(conversation);
+      const conversation: any = await getConversation(conversationId); // Use any for now
+      
+      const formattedConversation: FormattedConversation = {
+        id: conversation.id,
+        phoneNumber: conversation.phone_number,
+        chatId: conversation.chat_id,
+        lastMessageAt: conversation.last_message_at,
+        vehicle: conversation.vehicle, // Assuming vehicle structure matches
+        messages: conversation.messages.map((msg: any) => ({ // Map messages
+          id: msg.id,
+          body: msg.body,
+          timestamp: new Date(msg.timestamp).getTime() / 1000, // Convert timestamp string to number
+          isFromMe: msg.is_from_me, // Map is_from_me to isFromMe
+        })),
+        lastMessage: conversation.last_message ? { // Map lastMessage if exists
+          id: conversation.last_message.id,
+          body: conversation.last_message.body,
+          timestamp: new Date(conversation.last_message.timestamp).getTime() / 1000,
+          isFromMe: conversation.last_message.is_from_me,
+        } : null,
+      };
+
+      setSelectedConversation(formattedConversation);
     } catch (err: any) {
       console.error('Error fetching conversation details:', err);
       setError(err.message || 'Failed to fetch conversation details');
@@ -116,8 +147,8 @@ const ConversationsView: React.FC = () => {
   };
 
   // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp * 1000); // Convert timestamp (seconds) to milliseconds
     const now = new Date();
     
     // If it's today, show only the time
@@ -193,7 +224,7 @@ const ConversationsView: React.FC = () => {
                           </div>
                         </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400">
-                          {conversation.lastMessageAt ? formatDate(conversation.lastMessageAt) : ''}
+                          {conversation.lastMessage ? formatDate(conversation.lastMessage.timestamp) : ''}
                         </div>
                       </div>
                       {conversation.lastMessage && (
@@ -256,11 +287,11 @@ const ConversationsView: React.FC = () => {
                       selectedConversation.messages.map((msg) => (
                         <div 
                           key={msg.id} 
-                          className={`flex ${msg.is_from_me ? 'justify-end' : 'justify-start'}`}
+                          className={`flex ${msg.isFromMe ? 'justify-end' : 'justify-start'}`}
                         >
                           <div 
                             className={`max-w-[80%] px-4 py-2 rounded-lg
-                              ${msg.is_from_me 
+                              ${msg.isFromMe 
                                 ? 'bg-green-500 text-white rounded-tr-none' 
                                 : 'bg-slate-200 dark:bg-slate-700 rounded-tl-none'}`}
                           >

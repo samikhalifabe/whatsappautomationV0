@@ -11,12 +11,10 @@ import { Loader2, Send, MessageSquare, Phone, AlertCircle, CheckCircle } from "l
 import { useWhatsApp } from "./WhatsAppContext"
 import MessageList from "./MessageList"
 import { supabase } from "@/lib/supabase"
-import type { Database } from "@/types/supabase"
+import { Vehicle } from "../types/vehicles"
 
 // ID utilisateur temporaire jusqu'à ce que l'authentification soit implémentée
 const TEMP_USER_ID = "00000000-0000-0000-0000-000000000000"
-
-type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"]
 
 interface VehicleConversationProps {
   vehicle: Vehicle

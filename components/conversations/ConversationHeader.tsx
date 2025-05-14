@@ -12,25 +12,9 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import VehicleDetails from './VehicleDetails'; // Import the new component
-import type { Database } from "@/types/supabase";
-
-// Define types locally for now, to be centralized later
-type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
-interface Message { // Basic message structure for lastMessage
-  id: string;
-  body: string;
-  timestamp: number;
-  isFromMe: boolean;
-}
-interface ChatGroup {
-  id: string;
-  chatId: string;
-  chatName: string;
-  phoneNumber: string;
-  vehicle?: Vehicle | null;
-  state?: string;
-  lastMessage?: Message | null; // Added for context if needed
-}
+import { Message } from "../../types/messages";
+import { ChatGroup } from "../../types/conversations";
+import { Vehicle } from "../../types/vehicles";
 
 interface ConversationHeaderProps {
   selectedConversation: ChatGroup | null | undefined;

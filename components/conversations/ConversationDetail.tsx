@@ -9,36 +9,9 @@ import ConversationHeader from './ConversationHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput'; // Already created
 
-import type { Database } from "@/types/supabase";
-
-// Define types locally for now, to be centralized later
-type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
-interface AppMessage { // Renamed to avoid conflict with Message from lucide-react
-  id: string;
-  from: string;
-  to: string;
-  body: string;
-  timestamp: number;
-  isFromMe: boolean;
-  chatName: string;
-  chatId: string;
-  conversation_id?: string;
-  vehicle?: Vehicle | null;
-  message_id?: string;
-}
-interface ChatGroup {
-  id: string;
-  chatId: string;
-  chatName: string;
-  messages: AppMessage[];
-  lastMessageTime: number;
-  phoneNumber: string;
-  rawPhoneNumbers: string[];
-  vehicle?: Vehicle | null;
-  debugInfo?: string;
-  lastMessage?: AppMessage | null;
-  state?: string;
-}
+import { AppMessage } from "../../types/messages";
+import { ChatGroup } from "../../types/conversations";
+import { Vehicle } from "../../types/vehicles";
 
 interface ConversationDetailProps {
   selectedConversation: ChatGroup | null | undefined;
