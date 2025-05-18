@@ -35,7 +35,7 @@ export function useMultiSender() {
       await refreshStatus()
     }
     checkStatus()
-  }, [refreshStatus])
+  }, []) // Tableau de dépendances vide = exécution unique au montage
 
   const handleRefreshStatus = useCallback(async () => {
     setIsRefreshing(true)

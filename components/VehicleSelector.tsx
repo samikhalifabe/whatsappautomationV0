@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area" // Keep ScrollArea for pagination controls wrapper
 import { Checkbox } from "@/components/ui/checkbox"
-import { FixedSizeGrid } from 'react-window' // Import FixedSizeGrid
+// import { FixedSizeGrid } from 'react-window' // Import FixedSizeGrid
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Car,
@@ -397,149 +397,135 @@ export default function VehicleSelector({ onVehiclesSelected, selectedVehicles =
           </Button>
         </div>
 
-        {loadingVehicles ? (
-          <div className="flex items-center justify-center h-[500px]">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 rounded-full border-2 border-[#25D366] border-t-transparent animate-spin"></div>
-              <p className="text-sm text-muted-foreground">Chargement des véhicules...</p>
+        <ScrollArea className="h-[500px] border rounded-md">
+          {loadingVehicles ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="flex flex-col items-center gap-2">
+                <div className="h-8 w-8 rounded-full border-2 border-[#25D366] border-t-transparent animate-spin"></div>
+                <p className="text-sm text-muted-foreground">Chargement des véhicules...</p>
+              </div>
             </div>
-          </div>
-        ) : sortedVehicles.length > 0 ? (
-          <FixedSizeGrid
-            columnCount={2} // For your 2-column grid
-            columnWidth={300} // Adjust based on your card width
-            height={500} // Match ScrollArea height
-            rowCount={Math.ceil(sortedVehicles.length / 2)}
-            rowHeight={200} // Adjust based on your card height
-            width={620} // Adjust based on your container width (2 * columnWidth + gap)
-            className="grid-container" // Add a class for potential styling
-          >
-            {({ columnIndex, rowIndex, style }) => {
-              const index = rowIndex * 2 + columnIndex
-              if (index >= sortedVehicles.length) return null
-
-              const vehicle = sortedVehicles[index]
-              return (
-                <div style={style} className="p-1.5"> {/* Adjust padding as needed */}
-                  <div
-                    key={vehicle.id}
-                    className={cn(
-                      "flex flex-col rounded-md border transition-colors h-full", // Ensure card takes full height
-                      selectedVehicleIds.includes(vehicle.id)
-                        ? "border-[#25D366] bg-[#25D366]/5"
-                        : "border-slate-200 hover:border-slate-300 bg-white dark:bg-slate-900",
-                      vehicle.contact_status === "contacted" ? "opacity-80" : "",
-                    )}
-                  >
-                    <div className="flex items-start p-3">
-                      <Checkbox
-                        id={`vehicle-${vehicle.id}`}
-                        checked={selectedVehicleIds.includes(vehicle.id)}
-                        onCheckedChange={() => toggleVehicleSelection(vehicle.id)}
-                        className="mt-1 mr-3"
-                      />
-                      <div className="flex items-start gap-3 flex-1">
-                        {vehicle.image_url ? (
-                          <div className="flex-shrink-0 h-16 w-16 rounded-md overflow-hidden">
-                            <img
-                              src={vehicle.image_url || "/placeholder.svg"}
-                              alt={`${vehicle.brand || "N/A"} ${vehicle.model || "N/A"}`}
-                              className="h-full w-full object-cover"
-                              loading="lazy" // Add lazy loading attribute
-                              onError={(e) => {
-                                ;(e.target as HTMLImageElement).src =
-                                  "https://placehold.co/64x64/gray/white?text=No+Image"
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex-shrink-0 h-16 w-16 rounded-md bg-slate-100 flex items-center justify-center">
-                            <Car className="h-8 w-8 text-slate-400" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium">
-                            {vehicle.brand || "N/A"} {vehicle.model || "N/A"} {vehicle.year ? `(${vehicle.year})` : ""}
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {vehicle.price && (
-                              <Badge variant="outline" className="text-xs flex items-center gap-1 bg-slate-50">
-                                <Banknote className="h-3 w-3" />
-                                {vehicle.price.toLocaleString("fr-FR")} €
-                              </Badge>
-                            )}
-                            {vehicle.mileage && (
-                              <Badge variant="outline" className="text-xs flex items-center gap-1 bg-slate-50">
-                                <Gauge className="h-3 w-3" />
-                                {vehicle.mileage.toLocaleString("fr-FR")} km
-                              </Badge>
-                            )}
-                            {vehicle.fuel_type && (
-                              <Badge variant="outline" className="text-xs flex items-center gap-1 bg-slate-50">
-                                <Fuel className="h-3 w-3" />
-                                {vehicle.fuel_type}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {vehicle.location && (
-                              <Badge variant="outline" className="text-xs flex items-center gap-1 bg-slate-50">
-                                <MapPin className="h-3 w-3" />
-                                {vehicle.location}
-                              </Badge>
-                            )}
-                            {vehicle.phone && (
-                              <Badge variant="outline" className="text-xs flex items-center gap-1 bg-slate-50">
-                                <Phone className="h-3 w-3" />
-                                {vehicle.phone}
-                              </Badge>
-                            )}
-                            {vehicle.contact_status === "contacted" && (
-                              <Badge
-                                variant="outline"
-                                className="text-xs flex items-center gap-1 text-green-600 border-green-600 bg-green-50"
-                              >
-                                <MessageCircle className="h-3 w-3" />
-                                Contacté
-                              </Badge>
-                            )}
-                          </div>
+          ) : vehiclesWithPhone.length > 0 ? (
+            <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              {paginatedVehicles.map((vehicle) => ( // Use paginatedVehicles here
+                <div
+                  key={vehicle.id}
+                  className={cn(
+                    "flex flex-col rounded-md border transition-colors",
+                    selectedVehicleIds.includes(vehicle.id)
+                      ? "border-[#25D366] bg-[#25D366]/5"
+                      : "border-slate-200 hover:border-slate-300 bg-white dark:bg-slate-900",
+                    vehicle.contact_status === "contacted" ? "opacity-80" : "",
+                  )}
+                >
+                  <div className="flex items-start p-3">
+                    <Checkbox
+                      id={`vehicle-${vehicle.id}`}
+                      checked={selectedVehicleIds.includes(vehicle.id)}
+                      onCheckedChange={() => toggleVehicleSelection(vehicle.id)}
+                      className="mt-1 mr-3"
+                    />
+                    <div className="flex items-start gap-3 flex-1">
+                      {vehicle.image_url ? (
+                        <div className="flex-shrink-0 h-16 w-16 rounded-md overflow-hidden">
+                          <img
+                            src={vehicle.image_url || "/placeholder.svg"}
+                            alt={`${vehicle.brand || "N/A"} ${vehicle.model || "N/A"}`}
+                            className="h-full w-full object-cover"
+                            loading="lazy" // Add lazy loading attribute
+                            onError={(e) => {
+                              ;(e.target as HTMLImageElement).src =
+                                "https://placehold.co/64x64/gray/white?text=No+Image"
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex-shrink-0 h-16 w-16 rounded-md bg-slate-100 flex items-center justify-center">
+                          <Car className="h-8 w-8 text-slate-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium">
+                          {vehicle.brand || "N/A"} {vehicle.model || "N/A"} {vehicle.year ? `(${vehicle.year})` : ""}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {vehicle.price && (
+                            <Badge variant="outline" className="text-xs flex items-center gap-1 bg-slate-50">
+                              <Banknote className="h-3 w-3" />
+                              {vehicle.price.toLocaleString("fr-FR")} €
+                            </Badge>
+                          )}
+                          {vehicle.mileage && (
+                            <Badge variant="outline" className="text-xs flex items-center gap-1 bg-slate-50">
+                              <Gauge className="h-3 w-3" />
+                              {vehicle.mileage.toLocaleString("fr-FR")} km
+                            </Badge>
+                          )}
+                          {vehicle.fuel_type && (
+                            <Badge variant="outline" className="text-xs flex items-center gap-1 bg-slate-50">
+                              <Fuel className="h-3 w-3" />
+                              {vehicle.fuel_type}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {vehicle.location && (
+                            <Badge variant="outline" className="text-xs flex items-center gap-1 bg-slate-50">
+                              <MapPin className="h-3 w-3" />
+                              {vehicle.location}
+                            </Badge>
+                          )}
+                          {vehicle.phone && (
+                            <Badge variant="outline" className="text-xs flex items-center gap-1 bg-slate-50">
+                              <Phone className="h-3 w-3" />
+                              {vehicle.phone}
+                            </Badge>
+                          )}
+                          {vehicle.contact_status === "contacted" && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs flex items-center gap-1 text-green-600 border-green-600 bg-green-50"
+                            >
+                              <MessageCircle className="h-3 w-3" />
+                              Contacté
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
-                    {vehicle.listing_url && (
-                      <div className="px-3 py-1.5 border-t text-xs">
-                        <a
-                          href={vehicle.listing_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center text-[#25D366] hover:underline"
-                        >
-                          Voir l'annonce
-                          <ChevronRight className="h-3 w-3 ml-1" />
-                        </a>
-                      </div>
-                    )}
                   </div>
+                  {vehicle.listing_url && (
+                    <div className="px-3 py-1.5 border-t text-xs">
+                      <a
+                        href={vehicle.listing_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center text-[#25D366] hover:underline"
+                      >
+                        Voir l'annonce
+                        <ChevronRight className="h-3 w-3 ml-1" />
+                      </a>
+                    </div>
+                  )}
                 </div>
-              )
-            }}
-          </FixedSizeGrid>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-[500px] py-10 text-center">
-            <Car className="h-12 w-12 text-muted-foreground opacity-20 mb-3" />
-            <p className="text-muted-foreground">
-              {filteredVehicles.length > 0
-                ? "Aucun véhicule avec numéro de téléphone trouvé"
-                : "Aucun véhicule trouvé"}
-            </p>
-            {activeFiltersCount > 0 && (
-              <Button variant="link" size="sm" onClick={resetFilters} className="mt-2">
-                Réinitialiser les filtres
-              </Button>
-            )}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full py-10 text-center">
+              <Car className="h-12 w-12 text-muted-foreground opacity-20 mb-3" />
+              <p className="text-muted-foreground">
+                {filteredVehicles.length > 0
+                  ? "Aucun véhicule avec numéro de téléphone trouvé"
+                  : "Aucun véhicule trouvé"}
+              </p>
+              {activeFiltersCount > 0 && (
+                <Button variant="link" size="sm" onClick={resetFilters} className="mt-2">
+                  Réinitialiser les filtres
+                </Button>
+              )}
+            </div>
+          )}
+        </ScrollArea>
 
         {/* Pagination Controls */}
         {sortedVehicles.length > itemsPerPage && (
