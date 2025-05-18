@@ -38,7 +38,7 @@ interface UseMessagesOptions {
 export const useMessages = (
   selectedConversation: ChatGroup | null | undefined,
   onMessageSentOrReceived: (newMessage: AppMessage, conversationId: string) => void, // Callback to update global conversations
-  options: UseMessagesOptions = { autoRefresh: true, refreshInterval: 10000 },
+  options: UseMessagesOptions = { autoRefresh: false, refreshInterval: 10000 }, // Changed autoRefresh to false
 ) => {
   const { user } = useAuth()
   const [messagesForSelectedChat, setMessagesForSelectedChat] = useState<AppMessage[]>([])
@@ -86,7 +86,7 @@ export const useMessages = (
         setIsRefreshing(false)
       }
     },
-    [isRefreshing],
+    [], // Removed isRefreshing from dependency array
   )
 
   // Effet pour gérer le chargement initial et la configuration de l'intervalle

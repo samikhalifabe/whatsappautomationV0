@@ -1,41 +1,39 @@
 "use client"
 
 import type React from "react"
-import ConversationItem from "./ConversationItem" // Import the new component
+import ConversationItem from "./ConversationItem"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, MessageCircle, Filter, Loader2 } from "lucide-react"
 import type { ChatGroup } from "../../types/conversations"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
+import { Button } from "@/components/ui/button"
+import { useConversations } from "@/hooks/useConversations"
 
 interface ConversationsListProps {
-  conversations: ChatGroup[]
   selectedConversationUUID: string | null
   onSelectConversation: (chatId: string, conversationUUID: string) => void
   formatDate: (timestamp: number) => string
   formatPhoneNumber: (phone: string) => string
   showDebugInfo?: boolean
-  loading: boolean // To show loading state for the list
 }
 
 const ConversationsList: React.FC<ConversationsListProps> = ({
-  conversations,
   selectedConversationUUID,
   onSelectConversation,
   formatDate,
   formatPhoneNumber,
   showDebugInfo = false,
-  loading,
 }) => {
+  const { conversations, loadingDbConversations, page, totalPages, nextPage, prevPage } = useConversations()
   const [searchTerm, setSearchTerm] = useState("")
   const [activeFilter, setActiveFilter] = useState<string>("all")
 
   // Filtrer les conversations en fonction de la recherche et du filtre actif
   const filteredConversations = useMemo(() => {
     return conversations.filter((chat) => {
-      // Filtre de recherche
       const searchMatch =
         chat.chatName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         chat.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -53,7 +51,42 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
     })
   }, [conversations, searchTerm, activeFilter])
 
-  if (loading) {
+  // Fonction pour gérer le changement de page avec scrollTo forcé
+  const handlePageChange = useCallback((action: 'prev' | 'next') => {
+    // Naviguer vers la page suivante/précédente
+    if (action === 'prev') {
+      prevPage();
+    } else {
+      nextPage();
+    }
+
+    // Forcer le scroll en haut de façon impérative avec un setTimeout
+    // pour s'assurer que l'exécution se fait après tout le reste
+    setTimeout(() => {
+      const scrollElement = document.getElementById('conversations-list-scroll');
+      if (scrollElement) {
+        // Approche 1: Utiliser scrollTop
+        scrollElement.scrollTop = 0;
+
+        // Approche 2: Utiliser scrollTo (au cas où scrollTop ne fonctionnerait pas)
+        scrollElement.scrollTo({
+          top: 0,
+          behavior: 'auto' // 'auto' au lieu de 'smooth' pour éviter les animations
+        });
+
+        // Approche 3: Utiliser scrollIntoView sur un élément en haut
+        const topAnchor = document.getElementById('conversations-top-anchor');
+        if (topAnchor) {
+          topAnchor.scrollIntoView({
+            block: 'start',
+            behavior: 'auto'
+          });
+        }
+      }
+    }, 50); // Un délai de 50ms devrait être suffisant
+  }, [prevPage, nextPage]);
+
+  if (loadingDbConversations) {
     return (
       <Card className="h-full">
         <CardHeader className="pb-3">
@@ -113,7 +146,13 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
             {searchTerm && <p className="text-sm mt-1">Essayez d'autres termes de recherche</p>}
           </div>
         ) : (
-          <div className="max-h-[600px] overflow-y-auto">
+          <div
+            id="conversations-list-scroll" // ID fixe pour ciblage direct DOM
+            className="max-h-[600px] overflow-y-auto"
+          >
+            {/* Élément d'ancrage pour scrollIntoView */}
+            <div id="conversations-top-anchor" style={{ height: 0, overflow: 'hidden' }}></div>
+
             {filteredConversations.map((chat) => (
               <ConversationItem
                 key={chat.id}
@@ -128,6 +167,31 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
           </div>
         )}
       </CardContent>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4 px-4 pb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange('prev')}
+            disabled={page === 1 || loadingDbConversations}
+          >
+            Précédent
+          </Button>
+          <span className="text-sm">
+            Page {page} sur {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange('next')}
+            disabled={page === totalPages || loadingDbConversations}
+          >
+            Suivant
+          </Button>
+        </div>
+      )}
     </Card>
   )
 }

@@ -54,13 +54,19 @@ export const useConversations = () => {
   const [updatingConversationState, setUpdatingConversationState] = useState<boolean>(false)
   const [newMessageNotification, setNewMessageNotification] = useState<boolean>(false) // For visual cue
 
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20) // Default limit
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalConversations, setTotalConversations] = useState(0)
+
   const fetchDbConversations = useCallback(async () => {
     setLoadingDbConversations(true)
     setError(null)
     try {
-      const response = await axios.get("http://localhost:3001/api/conversations")
-      if (response.data && Array.isArray(response.data)) {
-        const dbChatGroups: ChatGroup[] = response.data.map((conv: any) => ({
+      const response = await axios.get(`http://localhost:3001/api/conversations?page=${page}&limit=${limit}`)
+      if (response.data && Array.isArray(response.data.conversations)) {
+        const dbChatGroups: ChatGroup[] = response.data.conversations.map((conv: any) => ({
           id: conv.id,
           chatId: conv.chatId || conv.id,
           chatName: conv.vehicle?.brand
@@ -77,19 +83,32 @@ export const useConversations = () => {
           debugInfo: `DB Conv - ID: ${conv.id}, Phone: ${conv.phoneNumber}, State: ${conv.state}`,
           state: conv.state,
         }))
-        dbChatGroups.sort((a, b) => b.lastMessageTime - a.lastMessageTime)
+        // Sorting is now done on the server, but keep client-side sort for safety/consistency if needed
+        // dbChatGroups.sort((a, b) => b.lastMessageTime - a.lastMessageTime)
         setConversations(dbChatGroups)
-        // Auto-select first conversation if none is selected
-        if (dbChatGroups.length > 0 && !selectedConversationUUID) {
+        setTotalPages(response.data.pagination.totalPages)
+        setTotalConversations(response.data.pagination.total)
+
+        // Auto-select first conversation if none is selected and we're on page 1
+        if (dbChatGroups.length > 0 && !selectedConversationUUID && page === 1) {
           setSelectedConversationUUID(dbChatGroups[0].id)
         }
+      } else {
+         // Handle case where response.data or response.data.conversations is not as expected
+         setConversations([]);
+         setTotalPages(1);
+         setTotalConversations(0);
+         setError("Format de réponse API inattendu lors de la récupération des conversations.");
       }
     } catch (err: any) {
       setError(`Impossible de récupérer les conversations de la base de données: ${err.message}`)
+      setConversations([]);
+      setTotalPages(1);
+      setTotalConversations(0);
     } finally {
       setLoadingDbConversations(false)
     }
-  }, [selectedConversationUUID]) // Add selectedConversationUUID to prevent re-fetch if already selected
+  }, [page, limit, selectedConversationUUID]) // Add page and limit to dependencies
 
   const handleSelectConversation = useCallback((chatId: string, conversationUUID: string) => {
     setSelectedConversationUUID(conversationUUID)
@@ -167,10 +186,23 @@ export const useConversations = () => {
     [selectedConversationUUID],
   )
 
-  // Initial fetch
+  // Initial fetch and fetch on page/limit change
   useEffect(() => {
     fetchDbConversations()
-  }, [fetchDbConversations])
+  }, [fetchDbConversations, page, limit]) // Depend on fetchDbConversations, page, and limit
+
+  // Pagination navigation functions
+  const nextPage = useCallback(() => {
+    setPage(prev => Math.min(prev + 1, totalPages));
+  }, [totalPages]);
+
+  const prevPage = useCallback(() => {
+    setPage(prev => Math.max(prev - 1, 1));
+  }, []);
+
+  const goToPage = useCallback((pageNum: number) => {
+    setPage(Math.max(1, Math.min(pageNum, totalPages)));
+  }, [totalPages]);
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationUUID)
 
@@ -188,5 +220,15 @@ export const useConversations = () => {
     updateConversationOnNewMessage,
     setNewMessageNotification, // Expose to clear notification from parent if needed
     setError, // Expose to allow parent to set errors
+
+    // Expose pagination state and functions
+    page,
+    limit,
+    totalPages,
+    totalConversations,
+    setLimit, // Allow changing limit from parent
+    nextPage,
+    prevPage,
+    goToPage,
   }
 }
