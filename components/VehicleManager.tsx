@@ -11,10 +11,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Car, MessageSquare, Phone, MapPin, Banknote, Gauge, Fuel } from "lucide-react"
 import { useVehicles } from "@/hooks/useVehicles"
-import { useContacts } from "@/hooks/useContacts"
 import { useContactHistory } from "@/hooks/useContactHistory"
 import VehicleConversation from "./VehicleConversation"
-import { Vehicle } from "../types/vehicles"
+import type { Vehicle } from "../types/vehicles"
 
 // Temporary user ID until authentication is implemented
 const TEMP_USER_ID = "00000000-0000-0000-0000-000000000000"
@@ -22,7 +21,7 @@ const TEMP_USER_ID = "00000000-0000-0000-0000-000000000000"
 export default function VehicleManager() {
   const { vehicles, loading: loadingVehicles } = useVehicles()
   const { fetchContactHistoryByRecordId } = useContactHistory()
-  
+
   const [selectedVehicles, setSelectedVehicles] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
@@ -34,7 +33,7 @@ export default function VehicleManager() {
       vehicle.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vehicle.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (vehicle.phone && vehicle.phone.includes(searchTerm))
+      (vehicle.phone && vehicle.phone.includes(searchTerm)),
   )
 
   const toggleVehicleSelection = (id: string) => {
@@ -119,13 +118,14 @@ export default function VehicleManager() {
                           />
                           {vehicle.image_url && (
                             <div className="flex-shrink-0 h-16 w-16 rounded-md overflow-hidden">
-                              <img 
-                                src={vehicle.image_url} 
-                                alt={`${vehicle.brand} ${vehicle.model}`} 
+                              <img
+                                src={vehicle.image_url}
+                                alt={`${vehicle.brand} ${vehicle.model}`}
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
                                   // Replace broken image with placeholder
-                                  (e.target as HTMLImageElement).src = "https://placehold.co/64x64/gray/white?text=No+Image";
+                                  ;(e.target as HTMLImageElement).src =
+                                    "https://placehold.co/64x64/gray/white?text=No+Image"
                                 }}
                               />
                             </div>
@@ -137,11 +137,11 @@ export default function VehicleManager() {
                             <div className="flex flex-wrap gap-2 mt-1">
                               <Badge variant="outline" className="text-xs flex items-center gap-1">
                                 <Banknote className="h-3 w-3" />
-                                {vehicle.price.toLocaleString('fr-FR')} €
+                                {vehicle.price.toLocaleString("fr-FR")} €
                               </Badge>
                               <Badge variant="outline" className="text-xs flex items-center gap-1">
                                 <Gauge className="h-3 w-3" />
-                                {vehicle.mileage.toLocaleString('fr-FR')} km
+                                {vehicle.mileage.toLocaleString("fr-FR")} km
                               </Badge>
                               <Badge variant="outline" className="text-xs flex items-center gap-1">
                                 <Fuel className="h-3 w-3" />
@@ -153,8 +153,24 @@ export default function VehicleManager() {
                               </Badge>
                               {vehicle.listing_url && (
                                 <Badge variant="outline" className="text-xs flex items-center gap-1">
-                                  <a href={vehicle.listing_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                                  <a
+                                    href={vehicle.listing_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 hover:underline"
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="12"
+                                      height="12"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      className="h-3 w-3"
+                                    >
                                       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                                       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                                     </svg>
@@ -209,8 +225,8 @@ export default function VehicleManager() {
             </DialogHeader>
 
             {selectedVehicle && (
-              <VehicleConversation 
-                vehicle={selectedVehicle} 
+              <VehicleConversation
+                vehicle={selectedVehicle}
                 onMessageSent={() => {
                   // Optionally refresh data after message sent
                 }}

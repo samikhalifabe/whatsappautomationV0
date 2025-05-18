@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react"
 import axios from "axios"
 
 interface WhatsAppContextType {
@@ -8,6 +8,7 @@ interface WhatsAppContextType {
   qrCode: string
   refreshStatus: () => Promise<void>
   lastChecked: Date | null
+  isRefreshing: boolean
 }
 
 const WhatsAppContext = createContext<WhatsAppContextType>({
@@ -15,6 +16,7 @@ const WhatsAppContext = createContext<WhatsAppContextType>({
   qrCode: "",
   refreshStatus: async () => {},
   lastChecked: null,
+  isRefreshing: false,
 })
 
 export const useWhatsApp = () => useContext(WhatsAppContext)
@@ -23,11 +25,20 @@ export const WhatsAppProvider = ({ children }: { children: ReactNode }) => {
   const [status, setStatus] = useState("disconnected")
   const [qrCode, setQrCode] = useState("")
   const [lastChecked, setLastChecked] = useState<Date | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const SERVER_URL = "http://localhost:3001"
 
+  // Augmenter l'intervalle à 30 secondes au lieu de 10
+  const REFRESH_INTERVAL = 30000
+
   const refreshStatus = async () => {
+    // Éviter les requêtes multiples si une est déjà en cours
+    if (isRefreshing) return
+
     try {
+      setIsRefreshing(true)
       console.log("Vérification du statut WhatsApp...")
       const { data } = await axios.get(`${SERVER_URL}/api/whatsapp/status`)
       console.log("Réponse du statut:", data)
@@ -43,6 +54,8 @@ export const WhatsAppProvider = ({ children }: { children: ReactNode }) => {
       console.error("Erreur lors de la vérification du statut WhatsApp:", error)
       setStatus("error")
       setLastChecked(new Date())
+    } finally {
+      setIsRefreshing(false)
     }
   }
 
@@ -57,15 +70,29 @@ export const WhatsAppProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  // Vérifier le statut au chargement et périodiquement
+  // Vérifier le statut au chargement
   useEffect(() => {
     refreshStatus()
-    const interval = setInterval(refreshStatus, 10000)
-    return () => clearInterval(interval)
+
+    // Nettoyer l'intervalle précédent pour éviter les doublons
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+    }
+
+    // Créer un nouvel intervalle
+    intervalRef.current = setInterval(refreshStatus, REFRESH_INTERVAL)
+
+    // Nettoyage à la désinstanciation
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
   }, [])
 
   return (
-    <WhatsAppContext.Provider value={{ status, qrCode, refreshStatus, lastChecked }}>
+    <WhatsAppContext.Provider value={{ status, qrCode, refreshStatus, lastChecked, isRefreshing }}>
       {children}
     </WhatsAppContext.Provider>
   )

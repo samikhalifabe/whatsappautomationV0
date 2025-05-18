@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import type { Database } from "@/types/supabase"
@@ -35,10 +37,7 @@ export function useContactHistory() {
       setLoading(true)
       setError(null)
 
-      const { data, error } = await supabase
-        .from("contact_history")
-        .insert(entry)
-        .select()
+      const { data, error } = await supabase.from("contact_history").insert(entry).select()
 
       if (error) throw error
       return data[0]
@@ -53,17 +52,13 @@ export function useContactHistory() {
 
   async function updateContactHistoryEntry(
     id: string,
-    updates: Database["public"]["Tables"]["contact_history"]["Update"]
+    updates: Database["public"]["Tables"]["contact_history"]["Update"],
   ) {
     try {
       setLoading(true)
       setError(null)
 
-      const { data, error } = await supabase
-        .from("contact_history")
-        .update(updates)
-        .eq("id", id)
-        .select()
+      const { data, error } = await supabase.from("contact_history").update(updates).eq("id", id).select()
 
       if (error) throw error
       return data[0]
@@ -81,10 +76,7 @@ export function useContactHistory() {
       setLoading(true)
       setError(null)
 
-      const { error } = await supabase
-        .from("contact_history")
-        .delete()
-        .eq("id", id)
+      const { error } = await supabase.from("contact_history").delete().eq("id", id)
 
       if (error) throw error
     } catch (err: any) {
@@ -97,17 +89,13 @@ export function useContactHistory() {
   }
 
   // Function to add a WhatsApp message to contact history
-  async function logWhatsAppMessage(
-    contactRecordId: string,
-    message: string,
-    userId: string
-  ) {
+  async function logWhatsAppMessage(contactRecordId: string, message: string, userId: string) {
     const entry = {
       contact_record_id: contactRecordId,
       contact_date: new Date().toISOString(),
       contact_type: "WhatsApp",
       notes: message,
-      user_id: userId
+      user_id: userId,
     }
 
     return addContactHistoryEntry(entry)
@@ -120,6 +108,6 @@ export function useContactHistory() {
     addContactHistoryEntry,
     updateContactHistoryEntry,
     deleteContactHistoryEntry,
-    logWhatsAppMessage
+    logWhatsAppMessage,
   }
 }

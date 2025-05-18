@@ -1,37 +1,50 @@
-"use client";
+"use client"
 
-import React from 'react';
-
-import { Message } from "../../types/messages";
+import type React from "react"
+import { Check, CheckCheck, Clock } from "lucide-react"
+import type { AppMessage } from "../../types/messages"
 
 interface MessageItemProps {
-  message: Message;
-  formatDate: (timestamp: number) => string;
+  message: AppMessage
+  formatDate: (timestamp: number) => string
 }
 
-const MessageItem = React.memo(({ message, formatDate }: MessageItemProps) => {
+const MessageItem: React.FC<MessageItemProps> = ({ message, formatDate }) => {
+  const isFromMe = message.isFromMe || message.fromMe
+
+  // Fonction pour déterminer l'icône de statut du message
+  const getStatusIcon = () => {
+    if (!isFromMe) return null
+
+    switch (message.status) {
+      case "sent":
+        return <Check className="h-3 w-3 text-slate-400" />
+      case "delivered":
+        return <CheckCheck className="h-3 w-3 text-slate-400" />
+      case "read":
+        return <CheckCheck className="h-3 w-3 text-blue-500" />
+      default:
+        return <Clock className="h-3 w-3 text-slate-400" />
+    }
+  }
+
   return (
-    <div
-      className={`flex ${message.isFromMe ? 'justify-end' : 'justify-start'}`}
-    >
+    <div className={`flex ${isFromMe ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[80%] px-4 py-2 rounded-lg
-          ${message.isFromMe
-            ? 'bg-green-500 text-white rounded-tr-none'
-            : 'bg-slate-200 dark:bg-slate-700 rounded-tl-none'}`}
+        className={`max-w-[80%] md:max-w-[70%] rounded-lg p-3 ${
+          isFromMe
+            ? "bg-[#DCF8C6] dark:bg-green-800 text-slate-800 dark:text-slate-100 rounded-tr-none"
+            : "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-tl-none"
+        }`}
       >
-        <p className="break-words">{message.body}</p>
-        <div className="text-xs mt-1 text-right opacity-70">
-          {formatDate(message.timestamp)}
-          {message.isFromMe && (
-            <span className="ml-1">✓</span> // This could be dynamic based on message status
-          )}
+        <div className="whitespace-pre-wrap break-words">{message.body}</div>
+        <div className="flex justify-end items-center mt-1 space-x-1">
+          <span className="text-xs text-slate-500 dark:text-slate-400">{formatDate(message.timestamp)}</span>
+          {getStatusIcon()}
         </div>
       </div>
     </div>
-  );
-});
+  )
+}
 
-MessageItem.displayName = 'MessageItem';
-
-export default MessageItem;
+export default MessageItem

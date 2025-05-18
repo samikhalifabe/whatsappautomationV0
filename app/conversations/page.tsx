@@ -1,5 +1,12 @@
-import WhatsAppConversations from "@/components/WhatsAppConversations";
+"use client"
 
-export default function ConversationsPage() {
-  return <WhatsAppConversations />;
+import { DashboardLayout } from "@/components/DashboardLayout"
+import { ConversationsPage } from "@/components/conversations/ConversationsPage"
+
+export default function ConversationsPageRoute() {
+  return (
+    <DashboardLayout>
+      <ConversationsPage />
+    </DashboardLayout>
+  )
 }

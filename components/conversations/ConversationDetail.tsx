@@ -1,30 +1,24 @@
-"use client";
-
-import React from 'react';
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { MessageCircle, AlertCircle } from "lucide-react";
-
-import ConversationHeader from './ConversationHeader';
-import MessageList from './MessageList';
-import MessageInput from './MessageInput'; // Already created
-
-import { AppMessage } from "../../types/messages";
-import { ChatGroup } from "../../types/conversations";
-import { Vehicle } from "../../types/vehicles";
+import type React from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { MessageList } from "./MessageList"
+import { MessageInput } from "./MessageInput"
+import { ConversationHeader } from "./ConversationHeader"
+import type { AppMessage } from "@/types/messages"
+import type { ChatGroup } from "@/types/conversations"
 
 interface ConversationDetailProps {
-  selectedConversation: ChatGroup | null | undefined;
-  messagesForSelectedChat: AppMessage[];
-  loadingMessages: boolean;
-  onSendMessage: (text: string) => void;
-  sendingMessage: boolean;
-  sendError: string | null;
-  whatsAppStatus: string; // e.g., 'connected', 'disconnected'
-  onStateChange: (newState: string) => void;
-  updatingConversationState: boolean;
-  formatDate: (timestamp: number) => string;
-  formatPhoneNumber: (phone: string) => string;
+  selectedConversation: ChatGroup | null
+  messagesForSelectedChat: AppMessage[]
+  loadingMessages: boolean
+  onSendMessage: (message: string) => Promise<void>
+  sendingMessage: boolean
+  sendError: string | null
+  whatsAppStatus: string
+  onStateChange: (conversationId: string, newState: string) => Promise<void>
+  updatingConversationState: boolean
+  formatDate: (timestamp: number) => string
+  formatPhoneNumber: (phoneNumber: string) => string
 }
 
 const ConversationDetail: React.FC<ConversationDetailProps> = ({
@@ -43,60 +37,45 @@ const ConversationDetail: React.FC<ConversationDetailProps> = ({
   if (!selectedConversation) {
     return (
       <Card className="h-full flex items-center justify-center">
-        <CardContent>
-          <div className="text-center text-slate-500 dark:text-slate-400">
-            <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Sélectionnez une conversation pour afficher les messages</p>
-          </div>
+        <CardContent className="p-6 text-center text-gray-500">
+          Sélectionnez une conversation pour afficher les messages
         </CardContent>
       </Card>
-    );
+    )
   }
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
-        <ConversationHeader
-          selectedConversation={selectedConversation}
-          onStateChange={onStateChange}
-          updatingConversationState={updatingConversationState}
-          formatPhoneNumber={formatPhoneNumber}
-        />
-      </CardHeader>
-      <CardContent className="flex-grow overflow-y-auto pt-0 flex flex-col">
-        <MessageList
-          messages={messagesForSelectedChat}
-          loadingMessages={loadingMessages}
-          formatDate={formatDate}
-        />
-
-        {whatsAppStatus !== 'connected' && (
-          <Alert variant="destructive" className="mb-2 mt-2">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>WhatsApp non connecté</AlertTitle>
-            <AlertDescription>
-              Veuillez vous connecter à WhatsApp avant d'envoyer des messages.
-            </AlertDescription>
-          </Alert>
+      <ConversationHeader
+        conversation={selectedConversation}
+        onStateChange={onStateChange}
+        updatingState={updatingConversationState}
+        formatPhoneNumber={formatPhoneNumber}
+      />
+      <CardContent className="flex-1 p-0 overflow-hidden flex flex-col">
+        {loadingMessages ? (
+          <div className="flex-1 p-4 space-y-4">
+            <Skeleton className="h-12 w-3/4" />
+            <Skeleton className="h-12 w-1/2 ml-auto" />
+            <Skeleton className="h-12 w-2/3" />
+            <Skeleton className="h-12 w-3/5 ml-auto" />
+          </div>
+        ) : (
+          <MessageList
+            messages={messagesForSelectedChat}
+            formatDate={formatDate}
+            className="flex-1 overflow-y-auto p-4"
+          />
         )}
-
-        {sendError && (
-          <Alert variant="destructive" className="mb-2 mt-2">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Erreur d'envoi</AlertTitle>
-            <AlertDescription>{sendError}</AlertDescription>
-          </Alert>
-        )}
-
         <MessageInput
-          initialValue="" // Or pass existing draft if available
-          onSend={onSendMessage}
-          disabled={whatsAppStatus !== 'connected' || sendingMessage}
+          onSendMessage={onSendMessage}
           sending={sendingMessage}
+          error={sendError}
+          disabled={whatsAppStatus !== "CONNECTED"}
         />
       </CardContent>
     </Card>
-  );
-};
+  )
+}
 
-export default ConversationDetail;
+export default ConversationDetail

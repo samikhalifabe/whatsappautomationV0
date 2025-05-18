@@ -1,10 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import axios from "axios"
-import { useContactHistory } from "@/hooks/useContactHistory"
 import { useWhatsApp } from "./WhatsAppContext"
-import { Card, CardContent } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 
 interface Message {
@@ -21,24 +19,36 @@ interface MessageListProps {
   vehicleId?: string
   contactId?: string
   refreshInterval?: number // en millisecondes
+  autoRefresh?: boolean // Nouvelle prop pour activer/désactiver l'auto-refresh
 }
 
-const MessageList = ({ vehicleId, contactId, refreshInterval = 5000 }: MessageListProps) => {
+export const MessageList = ({
+  vehicleId,
+  contactId,
+  refreshInterval = 10000,
+  autoRefresh = false, // Désactivé par défaut
+}: MessageListProps) => {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const { status } = useWhatsApp()
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Fonction pour récupérer les messages
   const fetchMessages = async () => {
+    // Éviter les requêtes multiples si une est déjà en cours
+    if (isRefreshing) return
+
     try {
+      setIsRefreshing(true)
       setError(null)
-      
+
       if (!vehicleId && !contactId) {
         setLoading(false)
         return
       }
-      
+
       // Déterminer l'URL en fonction des props
       let url = ""
       if (vehicleId) {
@@ -46,7 +56,7 @@ const MessageList = ({ vehicleId, contactId, refreshInterval = 5000 }: MessageLi
       } else if (contactId) {
         url = `http://localhost:3001/api/whatsapp/messages/contact/${contactId}`
       }
-      
+
       console.log("Fetching messages from:", url)
       const { data } = await axios.get(url)
       console.log("Messages received:", data)
@@ -56,19 +66,34 @@ const MessageList = ({ vehicleId, contactId, refreshInterval = 5000 }: MessageLi
       setError(err.message || "Erreur lors de la récupération des messages")
     } finally {
       setLoading(false)
+      setIsRefreshing(false)
     }
   }
 
-  // Récupérer les messages au chargement et à intervalles réguliers
+  // Récupérer les messages au chargement et configurer l'intervalle si autoRefresh est activé
   useEffect(() => {
+    // Charger les messages initialement
     fetchMessages()
-    
-    // Configurer l'intervalle de rafraîchissement
-    const interval = setInterval(fetchMessages, refreshInterval)
-    
+
+    // Nettoyer l'intervalle précédent
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+
+    // Configurer l'intervalle de rafraîchissement seulement si autoRefresh est activé
+    if (autoRefresh) {
+      intervalRef.current = setInterval(fetchMessages, refreshInterval)
+    }
+
     // Nettoyer l'intervalle lors du démontage du composant
-    return () => clearInterval(interval)
-  }, [vehicleId, contactId, refreshInterval])
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [vehicleId, contactId, refreshInterval, autoRefresh])
 
   // Déterminer si un message est entrant ou sortant
   const isIncomingMessage = (type: string) => {
@@ -96,9 +121,7 @@ const MessageList = ({ vehicleId, contactId, refreshInterval = 5000 }: MessageLi
       <div className="p-4 text-center text-gray-500">
         <p>Aucun message à afficher</p>
         {status !== "connected" && (
-          <p className="mt-2 text-sm">
-            Connectez-vous à WhatsApp pour envoyer et recevoir des messages
-          </p>
+          <p className="mt-2 text-sm">Connectez-vous à WhatsApp pour envoyer et recevoir des messages</p>
         )}
       </div>
     )
@@ -113,9 +136,7 @@ const MessageList = ({ vehicleId, contactId, refreshInterval = 5000 }: MessageLi
         >
           <div
             className={`max-w-[80%] p-3 rounded-lg ${
-              isIncomingMessage(message.contact_type)
-                ? "bg-gray-100 text-gray-800"
-                : "bg-[#25D366] text-white"
+              isIncomingMessage(message.contact_type) ? "bg-gray-100 text-gray-800" : "bg-[#25D366] text-white"
             }`}
           >
             <p className="whitespace-pre-wrap break-words">{message.notes}</p>

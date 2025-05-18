@@ -10,9 +10,9 @@ Ce document fournit des instructions pour déboguer efficacement l'application W
 
 Une page de logs a été ajoutée à l'application pour faciliter le débogage. Vous pouvez y accéder à l'adresse suivante :
 
-```
+\`\`\`
 http://localhost:3000/logs
-```
+\`\`\`
 
 Cette page vous permet de :
 - Voir l'état du serveur WhatsApp et de l'application Next.js
@@ -25,10 +25,10 @@ Cette page vous permet de :
 Les logs du serveur WhatsApp sont affichés dans le terminal où le serveur est exécuté. Pour voir ces logs :
 
 1. Exécutez le serveur avec la commande suivante :
-   ```bash
+   \`\`\`bash
    cd /Users/sami/Journey/Dev/whatsapp-server
    node server.js
-   ```
+   \`\`\`
 
 2. Les logs seront affichés dans le terminal.
 
@@ -37,10 +37,10 @@ Les logs du serveur WhatsApp sont affichés dans le terminal où le serveur est 
 Les logs de l'application Next.js sont affichés dans le terminal où l'application est exécutée. Pour voir ces logs :
 
 1. Exécutez l'application avec la commande suivante :
-   ```bash
+   \`\`\`bash
    cd /Users/sami/Journey/Dev/whatsappautomationV0
    npm run dev
-   ```
+   \`\`\`
 
 2. Les logs seront affichés dans le terminal.
 
@@ -74,10 +74,10 @@ Pour utiliser des points d'arrêt :
 
 Pour un débogage plus avancé du serveur WhatsApp, vous pouvez utiliser l'inspecteur Node.js :
 
-```bash
+\`\`\`bash
 cd /Users/sami/Journey/Dev/whatsapp-server
 node --inspect server.js
-```
+\`\`\`
 
 Puis ouvrez Chrome et accédez à `chrome://inspect` pour connecter l'inspecteur.
 

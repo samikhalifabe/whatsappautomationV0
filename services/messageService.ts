@@ -27,10 +27,7 @@ interface FormattedConversation {
 // Update vehicle contact status
 async function updateVehicleContactStatus(vehicleId: string) {
   try {
-    const { error } = await supabase
-      .from("vehicles")
-      .update({ contact_status: "contacted" })
-      .eq("id", vehicleId)
+    const { error } = await supabase.from("vehicles").update({ contact_status: "contacted" }).eq("id", vehicleId)
 
     if (error) throw error
   } catch (err) {
@@ -45,7 +42,7 @@ export async function sendWhatsAppMessage(
   phone: string,
   message: string,
   vehicle: Vehicle | null | undefined,
-  userId: string
+  userId: string,
 ): Promise<SendMessageResult> {
   try {
     // Send the WhatsApp message via the API
@@ -53,13 +50,13 @@ export async function sendWhatsAppMessage(
       number: phone,
       message,
       vehicleId: vehicle?.id, // Optional vehicleId
-      userId
+      userId,
     })
 
     return {
       success: true,
       messageId: data.messageId,
-      conversationId: data.conversationId
+      conversationId: data.conversationId,
     }
   } catch (error: any) {
     console.error("Error in sendWhatsAppMessage:", error)

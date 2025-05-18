@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
@@ -23,7 +25,10 @@ export function useAuth(): UseAuthReturn {
         setError(null)
 
         // Récupérer la session actuelle
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession()
 
         if (sessionError) {
           throw sessionError
@@ -43,7 +48,9 @@ export function useAuth(): UseAuthReturn {
     fetchUser()
 
     // Écouter les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null)
     })
 

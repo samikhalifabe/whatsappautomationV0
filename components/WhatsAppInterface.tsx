@@ -41,30 +41,26 @@ const WhatsAppInterface = () => {
   // Fonction pour trouver un véhicule par numéro de téléphone
   const findVehicleByPhone = async (phoneNumber: string) => {
     if (!phoneNumber) return null
-    
+
     setLoadingVehicle(true)
     try {
       // Formater le numéro de téléphone pour la recherche
       const formattedPhone = phoneNumber.trim()
-      
-      const { data, error } = await supabase
-        .from('vehicles')
-        .select('*')
-        .eq('phone', formattedPhone)
-        .limit(1)
-      
+
+      const { data, error } = await supabase.from("vehicles").select("*").eq("phone", formattedPhone).limit(1)
+
       if (error) {
-        console.error('Erreur lors de la recherche du véhicule:', error)
+        console.error("Erreur lors de la recherche du véhicule:", error)
         return null
       }
-      
+
       if (data && data.length > 0) {
         return data[0]
       }
-      
+
       return null
     } catch (error) {
-      console.error('Exception lors de la recherche du véhicule:', error)
+      console.error("Exception lors de la recherche du véhicule:", error)
       return null
     } finally {
       setLoadingVehicle(false)
@@ -81,7 +77,7 @@ const WhatsAppInterface = () => {
         setSelectedVehicle(null)
       }
     }
-    
+
     searchVehicle()
   }, [number])
 
@@ -118,162 +114,152 @@ const WhatsAppInterface = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <Card className="shadow-lg border-0">
-        <CardHeader className="bg-[#25D366] text-white rounded-t-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Smartphone className="h-6 w-6" />
-              <CardTitle>WhatsApp Automation</CardTitle>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRefreshStatus}
-              disabled={isRefreshing}
-              className="h-8 text-white hover:bg-white/20"
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="bg-[#25D366]/10 rounded-t-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Smartphone className="h-5 w-5 text-[#25D366]" />
+            <CardTitle>Envoi de message WhatsApp</CardTitle>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleRefreshStatus} disabled={isRefreshing} className="h-8">
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+            Actualiser
+          </Button>
+        </div>
+        <CardDescription>Envoyez des messages WhatsApp à vos contacts</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-6 pb-2">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Badge
+              variant={status === "connected" ? "default" : "destructive"}
+              className={`${status === "connected" ? "bg-[#25D366]" : ""}`}
             >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-              <span className="ml-1">Actualiser</span>
-            </Button>
+              {status === "connected" ? "Connecté" : "Déconnecté"}
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              {status === "connected"
+                ? "Votre WhatsApp est connecté et prêt à envoyer des messages"
+                : "Veuillez scanner le QR code pour vous connecter"}
+            </span>
           </div>
-          <CardDescription className="text-white/80">Envoyez des messages WhatsApp automatiquement</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6 pb-2">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <Badge
-                variant={status === "connected" ? "default" : "destructive"}
-                className={`${status === "connected" ? "bg-[#25D366]" : ""}`}
-              >
-                {status === "connected" ? "Connecté" : "Déconnecté"}
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                {status === "connected"
-                  ? "Votre WhatsApp est connecté et prêt à envoyer des messages"
-                  : "Veuillez scanner le QR code pour vous connecter"}
-              </span>
-            </div>
-            {lastChecked && (
-              <span className="text-xs text-muted-foreground">Mis à jour: {lastChecked.toLocaleTimeString()}</span>
-            )}
-          </div>
+          {lastChecked && (
+            <span className="text-xs text-muted-foreground">Mis à jour: {lastChecked.toLocaleTimeString()}</span>
+          )}
+        </div>
 
-          {status === "disconnected" && qrCode && (
-            <div className="flex flex-col items-center justify-center p-6 border rounded-lg bg-slate-50 dark:bg-slate-900">
-              <div className="flex items-center gap-2 mb-4 text-lg font-medium">
-                <QrCode className="h-5 w-5" />
-                <h2>Scannez ce QR code avec WhatsApp</h2>
-              </div>
-              <div className="bg-white p-4 rounded-lg shadow-sm">
-                <QRCodeCanvas value={qrCode} size={256} />
-              </div>
-              <p className="mt-4 text-sm text-muted-foreground text-center">
-                Ouvrez WhatsApp sur votre téléphone &gt; Menu &gt; WhatsApp Web &gt; Scanner le code QR
+        {status === "disconnected" && qrCode && (
+          <div className="flex flex-col items-center justify-center p-6 border rounded-lg bg-slate-50 dark:bg-slate-900">
+            <div className="flex items-center gap-2 mb-4 text-lg font-medium">
+              <QrCode className="h-5 w-5" />
+              <h2>Scannez ce QR code avec WhatsApp</h2>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <QRCodeCanvas value={qrCode} size={256} />
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground text-center">
+              Ouvrez WhatsApp sur votre téléphone &gt; Menu &gt; WhatsApp Web &gt; Scanner le code QR
+            </p>
+          </div>
+        )}
+
+        {status === "connected" && (
+          <form onSubmit={sendMessage} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="number" className="text-sm font-medium">
+                Numéro de téléphone (format international sans +)
+              </label>
+              <Input
+                id="number"
+                type="text"
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+                placeholder="33612345678"
+                required
+                className="border-slate-300"
+              />
+              <p className="text-xs text-muted-foreground">
+                Exemple: 33612345678 pour un numéro français (+33 6 12 34 56 78)
               </p>
             </div>
-          )}
 
-          {status === "connected" && (
-            <form onSubmit={sendMessage} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="number" className="text-sm font-medium">
-                  Numéro de téléphone (format international sans +)
-                </label>
-                <Input
-                  id="number"
-                  type="text"
-                  value={number}
-                  onChange={(e) => setNumber(e.target.value)}
-                  placeholder="33612345678"
-                  required
-                  className="border-slate-300"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Exemple: 33612345678 pour un numéro français (+33 6 12 34 56 78)
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="message" className="text-sm font-medium">
-                  Message
-                </label>
-                <Textarea
-                  id="message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Votre message..."
-                  required
-                  className="min-h-[120px] border-slate-300"
-                />
-              </div>
-
-              <Button type="submit" disabled={loading} className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white">
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Envoi en cours...
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Envoyer le message
-                  </>
-                )}
-              </Button>
-            </form>
-          )}
-
-          {result && (
-            <Alert
-              variant={result.success ? "default" : "destructive"}
-              className={`mt-4 ${result.success ? "bg-green-50 text-green-800 border-green-200" : ""}`}
-            >
-              {result.success ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-              <AlertTitle>{result.success ? "Succès" : "Erreur"}</AlertTitle>
-              <AlertDescription>{result.message}</AlertDescription>
-            </Alert>
-          )}
-
-          {status === "connected" && number && (
-            <div className="mt-6">
-              <Separator className="my-4" />
-              
-              <div className="flex items-center gap-2 mb-4">
-                <MessageSquare className="h-5 w-5 text-[#25D366]" />
-                <h3 className="text-lg font-medium">
-                  Conversation
-                  {selectedVehicle && (
-                    <span className="ml-2 text-sm font-normal text-gray-500">
-                      {selectedVehicle.brand} {selectedVehicle.model} ({selectedVehicle.year})
-                    </span>
-                  )}
-                </h3>
-              </div>
-              
-              {loadingVehicle ? (
-                <div className="flex justify-center items-center p-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
-                </div>
-              ) : selectedVehicle ? (
-                <MessageList vehicleId={selectedVehicle.id} refreshInterval={5000} />
-              ) : (
-                <div className="p-4 text-center text-gray-500 border border-dashed rounded-lg">
-                  <p>Aucun véhicule trouvé pour ce numéro de téléphone</p>
-                  <p className="text-sm mt-1">
-                    Les messages ne seront pas associés à un véhicule spécifique
-                  </p>
-                </div>
-              )}
+            <div className="space-y-2">
+              <label htmlFor="message" className="text-sm font-medium">
+                Message
+              </label>
+              <Textarea
+                id="message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Votre message..."
+                required
+                className="min-h-[120px] border-slate-300"
+              />
             </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-between pt-2 pb-6 text-xs text-muted-foreground">
-          <p>WhatsApp Automation</p>
-          <p>v1.0.0</p>
-        </CardFooter>
-      </Card>
-    </div>
+
+            <Button type="submit" disabled={loading} className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white">
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Envoi en cours...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Envoyer le message
+                </>
+              )}
+            </Button>
+          </form>
+        )}
+
+        {result && (
+          <Alert
+            variant={result.success ? "default" : "destructive"}
+            className={`mt-4 ${result.success ? "bg-green-50 text-green-800 border-green-200" : ""}`}
+          >
+            {result.success ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+            <AlertTitle>{result.success ? "Succès" : "Erreur"}</AlertTitle>
+            <AlertDescription>{result.message}</AlertDescription>
+          </Alert>
+        )}
+
+        {status === "connected" && number && (
+          <div className="mt-6">
+            <Separator className="my-4" />
+
+            <div className="flex items-center gap-2 mb-4">
+              <MessageSquare className="h-5 w-5 text-[#25D366]" />
+              <h3 className="text-lg font-medium">
+                Conversation
+                {selectedVehicle && (
+                  <span className="ml-2 text-sm font-normal text-gray-500">
+                    {selectedVehicle.brand} {selectedVehicle.model} ({selectedVehicle.year})
+                  </span>
+                )}
+              </h3>
+            </div>
+
+            {loadingVehicle ? (
+              <div className="flex justify-center items-center p-4">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+              </div>
+            ) : selectedVehicle ? (
+              <MessageList vehicleId={selectedVehicle.id} refreshInterval={5000} />
+            ) : (
+              <div className="p-4 text-center text-gray-500 border border-dashed rounded-lg">
+                <p>Aucun véhicule trouvé pour ce numéro de téléphone</p>
+                <p className="text-sm mt-1">Les messages ne seront pas associés à un véhicule spécifique</p>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+      <CardFooter className="flex justify-between pt-2 pb-6 text-xs text-muted-foreground">
+        <p>WhatsApp Automation</p>
+        <p>v1.0.0</p>
+      </CardFooter>
+    </Card>
   )
 }
 

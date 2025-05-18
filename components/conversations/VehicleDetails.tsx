@@ -1,35 +1,35 @@
-"use client";
+"use client"
 
-import React from 'react';
-import { Car, Calendar, Gauge, MapPin, Fuel, Euro, ExternalLink, Info } from "lucide-react";
-import type { Database } from "@/types/supabase"; // Assuming global Supabase types
+import type React from "react"
+import { Car, Calendar, Gauge, MapPin, Fuel, Euro, ExternalLink, Info } from "lucide-react"
+import type { Database } from "@/types/supabase" // Assuming global Supabase types
 
-type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
+type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"]
 
 interface VehicleDetailsProps {
-  vehicle: Vehicle | null | undefined;
-  layout?: 'compact' | 'full'; // To control verbosity if needed
-  className?: string;
+  vehicle: Vehicle | null | undefined
+  layout?: "compact" | "full" // To control verbosity if needed
+  className?: string
 }
 
 // Helper to format phone number
 const formatPhoneNumber = (phoneNumber: string | null | undefined) => {
-  if (!phoneNumber) return '';
-  return phoneNumber.replace('@c.us', '');
-};
+  if (!phoneNumber) return ""
+  return phoneNumber.replace("@c.us", "")
+}
 
-const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, layout = 'full', className = '' }) => {
+const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, layout = "full", className = "" }) => {
   if (!vehicle) {
-    if (layout === 'compact') return null; // Don't show anything if no vehicle in compact mode
+    if (layout === "compact") return null // Don't show anything if no vehicle in compact mode
     return (
       <div className={`text-xs text-red-500 mt-1 ${className}`}>
         <Info className="h-3 w-3 inline-block mr-1" />
         Aucun véhicule associé
       </div>
-    );
+    )
   }
 
-  if (layout === 'compact') {
+  if (layout === "compact") {
     return (
       <div className={`mt-2 ${className}`}>
         {vehicle.image_url && (
@@ -80,7 +80,7 @@ const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, layout = 'full
           </a>
         )}
       </div>
-    );
+    )
   }
 
   // Full layout (default)
@@ -95,7 +95,9 @@ const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, layout = 'full
           />
         )}
         <div>
-          <h4 className="font-medium text-sm">{vehicle.brand} {vehicle.model}</h4>
+          <h4 className="font-medium text-sm">
+            {vehicle.brand} {vehicle.model}
+          </h4>
           <div className="text-sm font-semibold text-green-600">
             <Euro className="h-4 w-4 inline-block mr-1" />
             {vehicle.price.toLocaleString()} €
@@ -124,10 +126,10 @@ const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, layout = 'full
           <span className="truncate">{vehicle.location}</span>
         </div>
         {vehicle.phone && (
-             <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 col-span-2 md:col-span-4">
-                <Info className="h-3 w-3 mr-1" /> {/* Using Info icon for phone */}
-                <span>Vendeur: {formatPhoneNumber(vehicle.phone)}</span>
-            </div>
+          <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 col-span-2 md:col-span-4">
+            <Info className="h-3 w-3 mr-1" /> {/* Using Info icon for phone */}
+            <span>Vendeur: {formatPhoneNumber(vehicle.phone)}</span>
+          </div>
         )}
       </div>
       {vehicle.listing_url && (
@@ -142,7 +144,7 @@ const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, layout = 'full
         </a>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default VehicleDetails;
+export default VehicleDetails

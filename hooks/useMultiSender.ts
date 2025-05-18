@@ -1,9 +1,10 @@
+"use client"
+
 import { useState, useEffect, useCallback } from "react"
 import type { SendStatus } from "@/types/message"
 import type { Database } from "@/types/supabase"
 import axios from "axios"
 import { useWhatsApp } from "@/components/WhatsAppContext"
-import { sendWhatsAppMessage } from "@/services/messageService"
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"]
 
@@ -43,7 +44,7 @@ export function useMultiSender() {
   }, [refreshStatus])
 
   const handleVehiclesSelected = useCallback((selectedVehicles: Vehicle[]) => {
-    const vehiclesWithPhone = selectedVehicles.filter(vehicle => vehicle.phone)
+    const vehiclesWithPhone = selectedVehicles.filter((vehicle) => vehicle.phone)
     setVehicles(vehiclesWithPhone)
   }, [])
 
@@ -55,60 +56,61 @@ export function useMultiSender() {
 
   const updateSendStatus = useCallback((contactId: string, newStatus: Partial<SendStatus>) => {
     setSendStatus((prev) =>
-      prev.map((status) =>
-        status.contactId === contactId ? { ...status, ...newStatus } : status,
-      ),
+      prev.map((status) => (status.contactId === contactId ? { ...status, ...newStatus } : status)),
     )
   }, [])
 
-  const processVehicle = useCallback(async (vehicle: Vehicle, personalizedMessage: string) => {
-    if (!vehicle.phone) {
-      return { success: false, error: "No phone number" }
-    }
+  const processVehicle = useCallback(
+    async (vehicle: Vehicle, personalizedMessage: string) => {
+      if (!vehicle.phone) {
+        return { success: false, error: "No phone number" }
+      }
 
-    // Add to the list of statuses
-    setSendStatus((prev) => [
-      ...prev,
-      {
-        contactId: vehicle.id,
-        contactName: `${vehicle.brand} ${vehicle.model}`,
-        contactNumber: vehicle.phone || "",
-        status: "pending",
-        timestamp: new Date(),
-      },
-    ])
+      // Add to the list of statuses
+      setSendStatus((prev) => [
+        ...prev,
+        {
+          contactId: vehicle.id,
+          contactName: `${vehicle.brand} ${vehicle.model}`,
+          contactNumber: vehicle.phone || "",
+          status: "pending",
+          timestamp: new Date(),
+        },
+      ])
 
-    try {
-      console.log(`Envoi du message pour ${vehicle.brand} ${vehicle.model} (${vehicle.phone})...`)
+      try {
+        console.log(`Envoi du message pour ${vehicle.brand} ${vehicle.model} (${vehicle.phone})...`)
 
-      // Option 1: Utiliser l'API directement
-      const { data } = await axios.post(`${BASE_URL}/send`, {
-        number: vehicle.phone,
-        message: personalizedMessage,
-      })
+        // Option 1: Utiliser l'API directement
+        const { data } = await axios.post(`${BASE_URL}/send`, {
+          number: vehicle.phone,
+          message: personalizedMessage,
+        })
 
-      // Option 2: Utiliser le service de messagerie (décommentez pour utiliser)
-      // const result = await sendWhatsAppMessage(
-      //   vehicle.phone || "",
-      //   personalizedMessage,
-      //   vehicle,
-      //   TEMP_USER_ID
-      // )
-      // const data = { messageId: result.messageId || "unknown" }
+        // Option 2: Utiliser le service de messagerie (décommentez pour utiliser)
+        // const result = await sendWhatsAppMessage(
+        //   vehicle.phone || "",
+        //   personalizedMessage,
+        //   vehicle,
+        //   TEMP_USER_ID
+        // )
+        // const data = { messageId: result.messageId || "unknown" }
 
-      console.log("Réponse du serveur:", data)
+        console.log("Réponse du serveur:", data)
 
-      updateSendStatus(vehicle.id, { status: "success", messageId: data.messageId })
-      return { success: true }
-    } catch (error: any) {
-      console.error("Erreur lors de l'envoi:", error)
-      updateSendStatus(vehicle.id, {
-        status: "error",
-        error: error.response?.data?.error || "Erreur d'envoi",
-      })
-      return { success: false, error: error.response?.data?.error || "Erreur d'envoi" }
-    }
-  }, [updateSendStatus])
+        updateSendStatus(vehicle.id, { status: "success", messageId: data.messageId })
+        return { success: true }
+      } catch (error: any) {
+        console.error("Erreur lors de l'envoi:", error)
+        updateSendStatus(vehicle.id, {
+          status: "error",
+          error: error.response?.data?.error || "Erreur d'envoi",
+        })
+        return { success: false, error: error.response?.data?.error || "Erreur d'envoi" }
+      }
+    },
+    [updateSendStatus],
+  )
 
   const sendMessages = useCallback(async () => {
     if (vehicles.length === 0 || !message) {
@@ -193,7 +195,18 @@ export function useMultiSender() {
       success: successCount > 0,
       message: `Envoi terminé: ${successCount} message(s) envoyé(s), ${failCount} échec(s)`,
     })
-  }, [vehicles, message, refreshStatus, status, randomizeOrder, maxPerHour, avoidDuplicates, minDelay, maxDelay, processVehicle])
+  }, [
+    vehicles,
+    message,
+    refreshStatus,
+    status,
+    randomizeOrder,
+    maxPerHour,
+    avoidDuplicates,
+    minDelay,
+    maxDelay,
+    processVehicle,
+  ])
 
   return {
     status,
