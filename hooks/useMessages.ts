@@ -151,25 +151,26 @@ export const useMessages = (
         )
 
         if (result.success) {
-          const newMessage: AppMessage = {
-            id: result.messageId || Date.now().toString(), // Use DB message ID if available
-            from: "me",
-            to: selectedConversation.phoneNumber,
-            body: text,
-            timestamp: Date.now() / 1000, // Consider using server timestamp if possible
-            isFromMe: true,
-            chatName: selectedConversation.chatName,
-            chatId: selectedConversation.chatId,
-            conversation_id: result.conversationId || selectedConversation.id,
-            vehicle: selectedConversation.vehicle,
-            message_id: result.messageId, // Original WhatsApp message ID
-          }
-          setMessagesForSelectedChat((prevMessages) =>
-            [...prevMessages, newMessage].sort((a, b) => a.timestamp - b.timestamp),
-          )
-          if (newMessage.conversation_id) {
-            onMessageSentOrReceived(newMessage, newMessage.conversation_id)
-          }
+          // Message will be added via WebSocket, so no need to update state here
+          // Optionally, call onMessageSentOrReceived if needed for other logic
+          // if (result.conversationId) {
+          //   // Create a temporary message object if needed for the callback
+          //   const tempMessage: AppMessage = {
+          //     id: result.messageId || Date.now().toString(),
+          //     from: "me",
+          //     to: selectedConversation.phoneNumber,
+          //     body: text,
+          //     timestamp: Date.now() / 1000,
+          //     isFromMe: true,
+          //     chatName: selectedConversation.chatName,
+          //     chatId: selectedConversation.chatId,
+          //     conversation_id: result.conversationId,
+          //     vehicle: selectedConversation.vehicle,
+          //     message_id: result.messageId,
+          //   };
+          //   onMessageSentOrReceived(tempMessage, result.conversationId);
+          // }
+          console.log("Message sent successfully, waiting for WebSocket confirmation.");
         } else {
           setSendError(result.error || "Échec de l'envoi du message")
         }
@@ -179,7 +180,7 @@ export const useMessages = (
         setSendingMessage(false)
       }
     },
-    [selectedConversation, user, onMessageSentOrReceived],
+    [selectedConversation, user, onMessageSentOrReceived], // Keep dependencies as they are used in the function
   )
 
   // Function to add a new message received via WebSocket
