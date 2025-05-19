@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useCallback, useState } from "react" // Added useState
+import { useEffect, useCallback, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -35,11 +35,13 @@ export default function VehicleSelector({ onVehiclesSelected, selectedVehicles =
     selectAllVehicles,
     getSelectedVehicles,
     setSelectedVehicleIds,
-    searchHistory
+    searchHistory,
+    fetchAllVehicleIds,
+    fetchVehiclesByIds
   } = useVehicleSearch()
 
   // State for showing/hiding filters
-  const [showFilters, setShowFilters] = useState(false); // Added state
+  const [showFilters, setShowFilters] = useState(false);
 
   // Initialiser selectedVehicleIds avec les IDs des véhicules déjà sélectionnés
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function VehicleSelector({ onVehiclesSelected, selectedVehicles =
 
   // Gestionnaire de changement pour les paramètres de recherche
   const handleFilterChange = useCallback((key: keyof typeof searchParams, value: any) => {
-    search({ [key]: value, page: 1 }) // Réinitialiser à la page 1 lors du changement de filtre
+    search({ [key]: value, page: 1 })
   }, [search])
 
   // Gestionnaire pour la soumission du formulaire de recherche
@@ -68,8 +70,8 @@ export default function VehicleSelector({ onVehiclesSelected, selectedVehicles =
   const activeFiltersCount = [
     searchParams.contactStatus !== "all",
     searchParams.sellerType !== "all",
-    searchParams.minPrice > 0 || searchParams.maxPrice < 100000, // Assuming maxPrice is 100000 by default
-    searchParams.minYear > 2000 || searchParams.maxYear < new Date().getFullYear(), // Assuming minYear is 2000 by default
+    searchParams.minPrice > 0 || searchParams.maxPrice < 100000,
+    searchParams.minYear > 2000 || searchParams.maxYear < new Date().getFullYear(),
   ].filter(Boolean).length
 
   // Add keyboard shortcut for search input focus
@@ -341,21 +343,41 @@ export default function VehicleSelector({ onVehiclesSelected, selectedVehicles =
             <Checkbox
               id="select-all"
               checked={selectedVehicleIds.length > 0 && selectedVehicleIds.length === results.vehicles.length}
-              onCheckedChange={selectAllVehicles}
+              onCheckedChange={(checked) => {
+                selectAllVehicles(); // Select/deselect all on current page
+                if (checked) {
+                  // If checked, pass the vehicles on the current page to onVehiclesSelected
+                  onVehiclesSelected(results.vehicles);
+                } else {
+                  // If unchecked, pass an empty array
+                  onVehiclesSelected([]);
+                }
+              }}
             />
             <label htmlFor="select-all" className="text-sm">
               Sélectionner tout ({selectedVehicleIds.length}/{results.vehicles.length})
             </label>
           </div>
-          <Button
-            size="sm"
-            onClick={confirmSelection}
-            disabled={selectedVehicleIds.length === 0}
-            className="h-9 bg-[#25D366] hover:bg-[#128C7E] text-white"
-          >
-            <CheckSquare className="h-4 w-4 mr-2" />
-            Utiliser la sélection ({selectedVehicleIds.length})
-          </Button>
+          <div className="flex items-center gap-2"> {/* Container for the two buttons */}
+            {/* Removed "Utiliser la sélection" button */}
+            <Button
+              size="sm"
+              onClick={async () => { // Button to select all matching vehicles
+                const allIds = await fetchAllVehicleIds();
+                setSelectedVehicleIds(allIds);
+                // Fetch the full vehicle objects for the selected IDs
+                const allVehicles = await fetchVehiclesByIds(allIds);
+                // Pass the fetched vehicle objects to onVehiclesSelected
+                onVehiclesSelected(allVehicles);
+              }}
+              disabled={loading || results.pagination.total === 0} // Disable while loading or if no total results
+              variant="outline" // Use outline variant for the second button
+              className="h-9"
+            >
+              <CheckSquare className="h-4 w-4 mr-2" />
+              Sélectionner toute la requête ({results.pagination.total}) {/* Text updated */}
+            </Button>
+          </div>
         </div>
 
         <div className="h-[500px] border rounded-md overflow-y-auto">
