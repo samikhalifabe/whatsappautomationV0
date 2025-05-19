@@ -122,7 +122,22 @@ export const useMessages = (
 
   const handleSendMessage = useCallback(
     async (text: string) => {
-      if (!selectedConversation || !text.trim() || !user) return
+      console.log("handleSendMessage called with text:", text);
+      console.log("selectedConversation:", selectedConversation);
+      console.log("user:", user);
+      console.log("text.trim():", text.trim());
+
+      if (!selectedConversation) {
+        console.log("Message sending aborted: No conversation selected.");
+        setSendError("Aucune conversation sélectionnée.");
+        return;
+      }
+      if (!text.trim()) {
+        console.log("Message sending aborted: Message is empty.");
+        // No need to set error for empty message, input is usually disabled or cleared
+        return;
+      }
+      // Removed the check for !user here to allow sending without being logged in
 
       setSendingMessage(true)
       setSendError(null)
@@ -132,7 +147,7 @@ export const useMessages = (
           selectedConversation.phoneNumber,
           text,
           selectedConversation.vehicle,
-          user.id,
+          user ? user.id : null, // Pass user.id if user exists, otherwise pass null
         )
 
         if (result.success) {

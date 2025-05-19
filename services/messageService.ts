@@ -42,16 +42,20 @@ export async function sendWhatsAppMessage(
   phone: string,
   message: string,
   vehicle: Vehicle | null | undefined,
-  userId: string,
+  userId: string | null, // Allow userId to be null
 ): Promise<SendMessageResult> {
+  console.log("sendWhatsAppMessage called with:", { phone, message, vehicleId: vehicle?.id, userId });
   try {
     // Send the WhatsApp message via the API
-    const { data } = await axios.post("http://localhost:3001/api/whatsapp/send", {
+    console.log("Attempting to send message via backend API...");
+    const response = await axios.post("http://localhost:3001/api/whatsapp/send", {
       number: phone,
       message,
       vehicleId: vehicle?.id, // Optional vehicleId
       userId,
-    })
+    });
+    const data = response.data;
+    console.log("Backend API responded:", response);
 
     return {
       success: true,
@@ -60,6 +64,18 @@ export async function sendWhatsAppMessage(
     }
   } catch (error: any) {
     console.error("Error in sendWhatsAppMessage:", error)
+    // Log more details about the error
+    if (error.response) {
+      console.error("Error response data:", error.response.data);
+      console.error("Error response status:", error.response.status);
+      console.error("Error response headers:", error.response.headers);
+    } else if (error.request) {
+      console.error("Error request:", error.request);
+    } else {
+      console.error("Error message:", error.message);
+    }
+    console.error("Error config:", error.config);
+
     return {
       success: false,
       error: error.response?.data?.error || error.message || "Erreur lors de l'envoi du message",
