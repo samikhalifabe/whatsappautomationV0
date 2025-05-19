@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
 import type { Database } from "@/types/supabase"
+import type { ChatGroup } from "@/types/conversations" // Import ChatGroup from shared types
 
 // Define types locally for now, to be centralized later
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"]
@@ -18,19 +19,6 @@ interface AppMessage {
   conversation_id?: string
   vehicle?: Vehicle | null
   message_id?: string
-}
-interface ChatGroup {
-  id: string // Conversation UUID
-  chatId: string
-  chatName: string
-  messages: AppMessage[] // Kept for type consistency, but detail view fetches its own
-  lastMessageTime: number
-  phoneNumber: string
-  rawPhoneNumbers: string[]
-  vehicle?: Vehicle | null
-  debugInfo?: string
-  lastMessage?: AppMessage | null
-  state?: string
 }
 
 // Function to update conversation state via API (can be moved to a service)
@@ -177,6 +165,7 @@ export const useConversations = () => {
             vehicle: newMessage.vehicle || null,
             lastMessage: newMessage,
             debugInfo: `Conv created via WebSocket - Msg ID: ${newMessage.id}`,
+            createdAt: new Date().toISOString(), // Add createdAt property
           }
           updatedConversations.push(newConversationStub)
           setNewMessageNotification(true)
@@ -208,7 +197,8 @@ export const useConversations = () => {
     [totalPages],
   )
 
-  const selectedConversation = conversations.find((c) => c.id === selectedConversationUUID)
+  const foundConversation = conversations.find((c) => c.id === selectedConversationUUID);
+  const selectedConversation = foundConversation === undefined ? null : foundConversation; // Explicitly set to null if not found
 
   return {
     conversations,

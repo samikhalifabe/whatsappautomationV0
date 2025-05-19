@@ -69,9 +69,12 @@ export async function GET(request: Request) {
          query = query.gte('year', minYear).lte('year', maxYear);
        }
 
-
+      console.log('showOnlyWithPhone:', showOnlyWithPhone); // Log the value of showOnlyWithPhone
+      console.log('showOnlyWithPhone:', showOnlyWithPhone); // Log the value of showOnlyWithPhone
       if (showOnlyWithPhone) {
-        query = query.not('phone', 'is', null);
+        // Alternative filter to exclude null AND empty strings
+        query = query.not('phone', 'is', null).not('phone', 'eq', '');
+        console.log('Applied phone filter (not null AND not empty). Current query:', query.toString()); // Log query after applying filter
       }
 
       // Apply sorting
@@ -120,8 +123,6 @@ export async function GET(request: Request) {
 
   console.log('Supabase query result:', { data, error, count }); // Log the result from Supabase
 
-  console.log('Supabase query result:', { data, error, count }); // Log the result from Supabase
-
   if (error) {
     console.error('Error fetching vehicles:', error);
     // Safely access error message
@@ -132,6 +133,7 @@ export async function GET(request: Request) {
   const total = count || 0;
   const totalPages = Math.ceil(total / limit);
 
+  const constructedQuery = query.toString(); // Get the constructed query string
   console.log('Search API sending response:', { // Log the response being sent
     vehicles: data || [],
     pagination: {
@@ -140,6 +142,13 @@ export async function GET(request: Request) {
       total,
       totalPages,
     },
+    debug: { // Include debug information in the response
+        receivedParams: {
+            searchTerm, contactStatus, sellerType, minPrice, maxPrice, minYear, maxYear, showOnlyWithPhone, sortBy, page, limit, idsParam
+        },
+        constructedQuery: constructedQuery,
+        supabaseResult: { data, error, count }
+    }
   });
 
   return NextResponse.json({
@@ -150,5 +159,12 @@ export async function GET(request: Request) {
       total,
       totalPages,
     },
+    debug: { // Include debug information in the response
+        receivedParams: {
+            searchTerm, contactStatus, sellerType, minPrice, maxPrice, minYear, maxYear, showOnlyWithPhone, sortBy, page, limit, idsParam
+        },
+        constructedQuery: constructedQuery,
+        supabaseResult: { data, error, count }
+    }
   });
 }

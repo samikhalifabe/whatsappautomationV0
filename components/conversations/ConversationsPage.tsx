@@ -167,10 +167,10 @@ export function ConversationsPage() {
                 <TooltipTrigger asChild>
                   <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
                     <div
-                      className={`w-2 h-2 rounded-full mr-2 ${whatsAppStatus === "CONNECTED" ? "bg-green-500" : "bg-red-500"}`}
+                      className={`w-2 h-2 rounded-full mr-2 ${whatsAppStatus === "connected" ? "bg-green-500" : "bg-red-500"}`}
                     ></div>
                     <span className="text-sm">
-                      WhatsApp {whatsAppStatus === "CONNECTED" ? "Connecté" : "Déconnecté"}
+                      WhatsApp {whatsAppStatus === "connected" ? "Connecté" : "Déconnecté"}
                     </span>
                   </div>
                 </TooltipTrigger>
@@ -213,13 +213,13 @@ export function ConversationsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
           <ConversationsList
-            conversations={conversations}
             selectedConversationUUID={selectedConversationUUID}
             onSelectConversation={handleSelectConversation}
             formatDate={formatDate}
             formatPhoneNumber={formatPhoneNumber}
             showDebugInfo={showDebugInfo}
-            loading={loadingDbConversations}
+            // conversations prop is not needed here as ConversationsList fetches it internally
+            // loading prop is also fetched internally by ConversationsList
           />
         </div>
 

@@ -274,18 +274,18 @@ export default function VehicleSelector({ onVehiclesSelected, selectedVehicles =
                 <label className="text-xs font-medium">Numéro de téléphone</label>
                 <div className="flex mt-1 space-x-2">
                   <Button
-                    variant={searchParams.showOnlyWithPhone ? "default" : "outline"}
+                    variant={searchParams.showOnlyWithPhone ? "default" : "outline"} // Use searchParams
                     size="sm"
-                    onClick={() => handleFilterChange('showOnlyWithPhone', true)}
+                    onClick={() => handleFilterChange('showOnlyWithPhone', true)} // Call handleFilterChange
                     className="h-8 text-xs"
                   >
                     <Phone className="h-3.5 w-3.5 mr-1" />
                     Avec téléphone
                   </Button>
                   <Button
-                    variant={!searchParams.showOnlyWithPhone ? "default" : "outline"}
+                    variant={!searchParams.showOnlyWithPhone ? "default" : "outline"} // Use searchParams
                     size="sm"
-                    onClick={() => handleFilterChange('showOnlyWithPhone', false)}
+                    onClick={() => handleFilterChange('showOnlyWithPhone', false)} // Call handleFilterChange
                     className="h-8 text-xs"
                   >
                     Tous les véhicules

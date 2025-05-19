@@ -64,9 +64,9 @@ export function ConversationDetailView({
           </Alert>
         )}
 
-        {whatsAppStatus !== "CONNECTED" && (
+        {whatsAppStatus !== "connected" && (
           <Alert
-            variant="warning"
+            variant="destructive" // Changed from "warning" to "destructive" to match allowed types
             className="m-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
           >
             <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
@@ -92,7 +92,7 @@ export function ConversationDetailView({
             initialValue=""
             onSend={onSendMessage}
             sending={sendingMessage}
-            disabled={whatsAppStatus !== "CONNECTED"}
+            disabled={whatsAppStatus !== "connected"}
           />
         </div>
       </CardContent>

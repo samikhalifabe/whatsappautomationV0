@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react"
-import axios from "axios"
+import axios, { AxiosError } from "axios"
 
 interface WhatsAppContextType {
   status: string
@@ -40,19 +40,28 @@ export const WhatsAppProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsRefreshing(true)
       console.log("Vérification du statut WhatsApp...")
-      const { data } = await axios.get(`${SERVER_URL}/api/whatsapp/status`)
-      console.log("Réponse du statut:", data)
+      const response = await axios.get(`${SERVER_URL}/api/whatsapp/status`)
+      const data = response.data;
+      console.log("Réponse complète du statut:", response)
+      console.log("Statut reçu du backend:", data.status)
 
       setStatus(data.status)
+      console.log("Statut mis à jour dans le frontend:", data.status)
       setLastChecked(new Date())
 
       // Si déconnecté, essayer d'obtenir le QR code
       if (data.status === "disconnected") {
         fetchQrCode()
       }
-    } catch (error) {
+    } catch (error) { // Keep error type as implicit unknown
       console.error("Erreur lors de la vérification du statut WhatsApp:", error)
+      // Log the error response if available using type assertion
+      if (axios.isAxiosError(error) && error.response) { // Use type guard for safety
+        console.error("Détails de l'erreur de réponse:", error.response.data);
+        console.error("Statut de l'erreur de réponse:", error.response.status);
+      }
       setStatus("error")
+      console.log("Statut mis à jour en cas d'erreur:", "error")
       setLastChecked(new Date())
     } finally {
       setIsRefreshing(false)
@@ -70,26 +79,30 @@ export const WhatsAppProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  // Vérifier le statut au chargement
+  // Vérifier le statut au chargement avec un léger délai initial
   useEffect(() => {
-    refreshStatus()
-
     // Nettoyer l'intervalle précédent pour éviter les doublons
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
     }
 
-    // Créer un nouvel intervalle
-    intervalRef.current = setInterval(refreshStatus, REFRESH_INTERVAL)
+    // Ajouter un délai avant la première vérification
+    const initialCheckTimer = setTimeout(() => {
+      refreshStatus();
+    }, 5000); // Délai de 5 secondes (ajustable si nécessaire)
+
+    // Créer un nouvel intervalle pour les vérifications régulières
+    intervalRef.current = setInterval(refreshStatus, REFRESH_INTERVAL);
 
     // Nettoyage à la désinstanciation
     return () => {
       if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
-    }
-  }, [])
+      clearTimeout(initialCheckTimer); // Nettoyer aussi le timer initial
+    };
+  }, []); // Empty dependency array means this runs once on mount
 
   return (
     <WhatsAppContext.Provider value={{ status, qrCode, refreshStatus, lastChecked, isRefreshing }}>
