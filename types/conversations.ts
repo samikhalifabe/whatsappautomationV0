@@ -13,6 +13,7 @@ export interface ChatGroup {
   debugInfo?: string
   lastMessage?: AppMessage | null
   state?: string
+  createdAt: string; // Add createdAt property
 }
 
 export interface FormattedConversation {

@@ -33,6 +33,13 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   const menuRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
+  // Temporary logs to check vehicle data
+  useEffect(() => {
+    console.log("ConversationItem chat data:", chat);
+    console.log("ConversationItem vehicle data:", chat.vehicle);
+    console.log("ConversationItem vehicle image URL:", chat.vehicle?.image_url);
+  }, [chat]);
+
   // Fermer le menu quand on clique en dehors
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -38,6 +38,10 @@ const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, layout = "full
               src={vehicle.image_url}
               alt={`${vehicle.brand} ${vehicle.model}`}
               className="w-16 h-16 object-cover rounded-md"
+              onError={(e) => {
+                // Replace broken image with a placeholder
+                (e.target as HTMLImageElement).src = "https://placehold.co/64x64/gray/white?text=No+Image";
+              }}
             />
             <div className="absolute bottom-0 right-0 bg-black bg-opacity-70 text-white px-1 py-0.5 text-xs rounded-tl-md">
               <Euro className="h-3 w-3 inline-block mr-0.5" />

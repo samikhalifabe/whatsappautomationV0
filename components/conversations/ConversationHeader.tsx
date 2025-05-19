@@ -86,14 +86,9 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
 
   const stateDetails = getStateDetails(state)
   const formattedPhone = formatPhoneNumber(vehicle?.phone || phoneNumber || "")
+  // Format date consistently to avoid hydration mismatches
   const formattedDate = createdAt
-    ? new Date(createdAt).toLocaleDateString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+    ? new Date(createdAt).toISOString().replace('T', ' ').substring(0, 16) // Format as YYYY-MM-DD HH:mm
     : "Date inconnue"
 
   // Fonction pour changer l'état avec confirmation
@@ -131,7 +126,7 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
                     <ZoomIn className="h-6 w-6 text-white drop-shadow-md" />
                   </div>
                   <div className="absolute bottom-1 right-1 bg-white/80 dark:bg-black/80 text-xs font-bold px-1.5 py-0.5 rounded shadow">
-                    {vehicle.price.toLocaleString()} €
+                    {vehicle.price?.toLocaleString()} €
                   </div>
                 </div>
               ) : (
@@ -307,7 +302,7 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
               />
               <div className="absolute bottom-4 left-0 right-0 text-center">
                 <div className="inline-block bg-black/70 text-white px-4 py-2 rounded-full text-sm">
-                  {vehicle.brand} {vehicle.model} • {vehicle.year} • {vehicle.price.toLocaleString()} €
+                  {vehicle.brand} {vehicle.model} • {vehicle.year} • {vehicle.price?.toLocaleString()} €
                 </div>
               </div>
             </div>

@@ -82,6 +82,7 @@ export const useConversations = () => {
           lastMessage: conv.lastMessage,
           debugInfo: `DB Conv - ID: ${conv.id}, Phone: ${conv.phoneNumber}, State: ${conv.state}`,
           state: conv.state,
+          createdAt: conv.created_at, // Map the created_at from the API response
         }))
         // Sorting is now done on the server, but keep client-side sort for safety/consistency if needed
         // dbChatGroups.sort((a, b) => b.lastMessageTime - a.lastMessageTime)
