@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import type { Database } from "@/types/supabase"
 
@@ -11,22 +13,62 @@ export function useVehicles() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  async function fetchVehicles() {
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(1000) // Augmenter la taille de page
+  const [totalCount, setTotalCount] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+
+  const fetchVehicles = useCallback(async (pageToFetch = 1) => {
     try {
       setLoading(true)
       setError(null)
 
-      const { data, error } = await supabase.from("vehicles").select("*").order("created_at", { ascending: false })
+      // First get the total count
+      const { count, error: countError } = await supabase
+        .from("vehicles")
+        .select("*", { count: "exact", head: true })
+
+      if (countError) throw countError
+      setTotalCount(count || 0)
+
+      // Then fetch the page
+      const from = (pageToFetch - 1) * pageSize
+      const to = from + pageSize - 1
+
+      const { data, error } = await supabase
+        .from("vehicles")
+        .select("*")
+        .range(from, to)
+        .order("created_at", { ascending: false })
 
       if (error) throw error
-      setVehicles(data || [])
+
+      if (pageToFetch === 1) {
+        setVehicles(data || [])
+      } else {
+        // Append to existing vehicles for continuous loading
+        setVehicles(prev => [...prev, ...(data || [])])
+      }
+
+      // Check if there are more vehicles to load
+      setHasMore((data?.length || 0) === pageSize)
+      setPage(pageToFetch)
     } catch (err: any) {
       console.error("Error fetching vehicles:", err)
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }
+  }, [pageSize])
+
+  // Load more vehicles
+  const loadMore = useCallback(() => {
+    if (hasMore && !loading) {
+      fetchVehicles(page + 1)
+    }
+  }, [fetchVehicles, page, hasMore, loading])
+
 
   async function getVehicleById(id: string) {
     try {
@@ -88,13 +130,18 @@ export function useVehicles() {
 
   useEffect(() => {
     fetchVehicles()
-  }, [])
+  }, [fetchVehicles])
 
   return {
     vehicles,
     loading,
     error,
     fetchVehicles,
+    loadMore,
+    hasMore,
+    totalCount,
+    page,
+    setPageSize,
     getVehicleById,
     addVehicle,
     updateVehicle,

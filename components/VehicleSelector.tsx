@@ -1,10 +1,11 @@
 "use client"
 
+"use client"
+
 import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area" // Keep ScrollArea for pagination controls wrapper
 import { Checkbox } from "@/components/ui/checkbox"
 // import { FixedSizeGrid } from 'react-window' // Import FixedSizeGrid
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -22,6 +23,7 @@ import {
   CheckSquare,
   X,
   ChevronRight,
+  Loader2, // Import Loader2 for loading spinner
 } from "lucide-react"
 import { useVehicles } from "@/hooks/useVehicles"
 import { cn } from "@/lib/utils"
@@ -33,7 +35,7 @@ interface VehicleSelectorProps {
 }
 
 export default function VehicleSelector({ onVehiclesSelected, selectedVehicles = [] }: VehicleSelectorProps) {
-  const { vehicles, loading: loadingVehicles } = useVehicles()
+  const { vehicles, loading: loadingVehicles, loadMore, hasMore, totalCount } = useVehicles()
 
   // Initialiser selectedVehicleIds avec les IDs des véhicules déjà sélectionnés
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>(selectedVehicles.map((vehicle) => vehicle.id))
@@ -51,10 +53,6 @@ export default function VehicleSelector({ onVehiclesSelected, selectedVehicles =
   const [showFilters, setShowFilters] = useState(false)
   const [sortBy, setSortBy] = useState<string>("default")
   const [showOnlyWithPhone, setShowOnlyWithPhone] = useState(true)
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 50 // Display only 50 vehicles at a time
 
   // Calculer les valeurs min/max pour les filtres
   const minPrice = Math.min(...vehicles.filter((v) => v.price).map((v) => v.price || 0), 0)
@@ -126,13 +124,6 @@ export default function VehicleSelector({ onVehiclesSelected, selectedVehicles =
       }
     })
   }, [vehiclesWithPhone, sortBy])
-
-  // Apply pagination to sorted vehicles
-  const paginatedVehicles = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const endIndex = startIndex + itemsPerPage
-    return sortedVehicles.slice(startIndex, endIndex)
-  }, [sortedVehicles, currentPage, itemsPerPage])
 
   const toggleVehicleSelection = (id: string) => {
     if (selectedVehicleIds.includes(id)) {
@@ -397,17 +388,17 @@ export default function VehicleSelector({ onVehiclesSelected, selectedVehicles =
           </Button>
         </div>
 
-        <ScrollArea className="h-[500px] border rounded-md">
-          {loadingVehicles ? (
+        <div className="h-[500px] border rounded-md overflow-y-auto"> {/* Use a div with overflow-y-auto instead of ScrollArea */}
+          {loadingVehicles && vehicles.length === 0 ? ( // Show initial loading spinner
             <div className="flex items-center justify-center h-full">
               <div className="flex flex-col items-center gap-2">
                 <div className="h-8 w-8 rounded-full border-2 border-[#25D366] border-t-transparent animate-spin"></div>
                 <p className="text-sm text-muted-foreground">Chargement des véhicules...</p>
               </div>
             </div>
-          ) : vehiclesWithPhone.length > 0 ? (
+          ) : sortedVehicles.length > 0 ? ( // Use sortedVehicles here
             <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-              {paginatedVehicles.map((vehicle) => ( // Use paginatedVehicles here
+              {sortedVehicles.map((vehicle) => ( // Use sortedVehicles here
                 <div
                   key={vehicle.id}
                   className={cn(
@@ -525,34 +516,32 @@ export default function VehicleSelector({ onVehiclesSelected, selectedVehicles =
               )}
             </div>
           )}
-        </ScrollArea>
+           {/* Load More Button */}
+          {hasMore && (
+            <div className="p-4 text-center">
+              <Button
+                onClick={loadMore}
+                disabled={loadingVehicles}
+                variant="outline"
+              >
+                {loadingVehicles ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Chargement...
+                  </>
+                ) : (
+                  "Charger plus de véhicules"
+                )}
+              </Button>
+            </div>
+          )}
 
-        {/* Pagination Controls */}
-        {sortedVehicles.length > itemsPerPage && (
-          <div className="flex justify-between items-center p-4 border-t mt-4">
-            <div className="text-sm text-muted-foreground">
-              Affichage {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, sortedVehicles.length)} sur {sortedVehicles.length}
+          {!loadingVehicles && sortedVehicles.length > 0 && (
+            <div className="p-4 text-center text-muted-foreground text-sm">
+              Affichage de {sortedVehicles.length} sur {totalCount} véhicules
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Précédent
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => p + 1)}
-                disabled={currentPage * itemsPerPage >= sortedVehicles.length}
-              >
-                Suivant
-              </Button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
