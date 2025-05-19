@@ -44,7 +44,7 @@ export function useVehicleSearch() {
     showOnlyWithPhone: true,
     sortBy: "created_at_desc", // Changed default sort to a valid column
     page: 1,
-    limit: 30,
+    limit: 50, // Changed limit to 50
   })
 
   const [results, setResults] = useState<SearchResult>({

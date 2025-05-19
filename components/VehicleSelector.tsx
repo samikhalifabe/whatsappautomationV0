@@ -492,40 +492,35 @@ export default function VehicleSelector({ onVehiclesSelected, selectedVehicles =
               )}
             </div>
           )}
-          {/* Load More Button */}
-          {results.pagination.page < results.pagination.totalPages && (
-            <div className="p-4 text-center">
-              <Button onClick={() => search({ page: searchParams.page + 1 })} disabled={loading} variant="outline">
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Chargement...
-                  </>
-                ) : (
-                  "Charger plus de véhicules"
-                )}
-              </Button>
-            </div>
-          )}
-          {!loading && results.vehicles.length > 0 && (
-            <div className="p-4 text-center text-muted-foreground text-sm">
-              Affichage de {results.vehicles.length} sur {results.pagination.total} véhicules
-            </div>
-          )}
         </div>
       </div>
-      {results.pagination.page < results.pagination.totalPages && (
-        <div className="flex justify-center p-4 border-t">
-          <Button variant="outline" onClick={() => search({ page: searchParams.page + 1 })} disabled={loading} className="w-full max-w-md">
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Chargement...
-              </>
-            ) : (
-              <>Charger plus de véhicules</>
-            )}
-          </Button>
+      {/* Pagination */}
+      {!loading && results.pagination.total > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t">
+          <div className="text-sm text-muted-foreground">
+            Affichage de {results.vehicles.length} sur {results.pagination.total} véhicules
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => search({ page: searchParams.page - 1 })}
+              disabled={searchParams.page <= 1 || loading}
+            >
+              Précédent
+            </Button>
+            <div className="text-sm font-medium">
+              Page {searchParams.page} sur {results.pagination.totalPages}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => search({ page: searchParams.page + 1 })}
+              disabled={searchParams.page >= results.pagination.totalPages || loading}
+            >
+              Suivant
+            </Button>
+          </div>
         </div>
       )}
     </div>

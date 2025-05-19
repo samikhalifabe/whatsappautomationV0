@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const showOnlyWithPhone = searchParams.get('showOnlyWithPhone') === 'true';
   const sortBy = searchParams.get('sortBy') || 'created_at_desc'; // Default sort
   const page = Number(searchParams.get('page')) || 1;
-  const limit = Number(searchParams.get('limit')) || 30;
+  const limit = Number(searchParams.get('limit')) || 50; // Changed limit to 50
 
   console.log('Search API received parameters:', {
     searchTerm, contactStatus, sellerType, minPrice, maxPrice, minYear, maxYear, showOnlyWithPhone, sortBy, page, limit
