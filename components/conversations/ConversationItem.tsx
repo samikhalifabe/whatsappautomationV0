@@ -35,10 +35,10 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 
   // Temporary logs to check vehicle data
   useEffect(() => {
-    console.log("ConversationItem chat data:", chat);
-    console.log("ConversationItem vehicle data:", chat.vehicle);
-    console.log("ConversationItem vehicle image URL:", chat.vehicle?.image_url);
-  }, [chat]);
+    console.log("ConversationItem chat data:", chat)
+    console.log("ConversationItem vehicle data:", chat.vehicle)
+    console.log("ConversationItem vehicle image URL:", chat.vehicle?.image_url)
+  }, [chat])
 
   // Fermer le menu quand on clique en dehors
   useEffect(() => {

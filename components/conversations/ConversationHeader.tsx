@@ -88,7 +88,10 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   const formattedPhone = formatPhoneNumber(vehicle?.phone || phoneNumber || "")
   // Format date consistently to avoid hydration mismatches
   const formattedDate = createdAt
-    ? new Date(createdAt).toISOString().replace('T', ' ').substring(0, 16) // Format as YYYY-MM-DD HH:mm
+    ? new Date(createdAt)
+        .toISOString()
+        .replace("T", " ")
+        .substring(0, 16) // Format as YYYY-MM-DD HH:mm
     : "Date inconnue"
 
   // Fonction pour changer l'état avec confirmation

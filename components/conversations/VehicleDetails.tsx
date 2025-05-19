@@ -40,7 +40,7 @@ const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, layout = "full
               className="w-16 h-16 object-cover rounded-md"
               onError={(e) => {
                 // Replace broken image with a placeholder
-                (e.target as HTMLImageElement).src = "https://placehold.co/64x64/gray/white?text=No+Image";
+                ;(e.target as HTMLImageElement).src = "https://placehold.co/64x64/gray/white?text=No+Image"
               }}
             />
             <div className="absolute bottom-0 right-0 bg-black bg-opacity-70 text-white px-1 py-0.5 text-xs rounded-tl-md">
@@ -50,12 +50,13 @@ const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, layout = "full
           </div>
         )}
         <div className="grid grid-cols-2 gap-1 text-xs">
-          {vehicle.brand && vehicle.model && ( // Add conditional rendering
-            <div className="text-green-600 flex items-center">
-              <Car className="h-3 w-3 mr-1" />
-              {vehicle.brand} {vehicle.model}
-            </div>
-          )}
+          {vehicle.brand &&
+            vehicle.model && ( // Add conditional rendering
+              <div className="text-green-600 flex items-center">
+                <Car className="h-3 w-3 mr-1" />
+                {vehicle.brand} {vehicle.model}
+              </div>
+            )}
           {vehicle.year && ( // Add conditional rendering
             <div className="text-slate-600 flex items-center">
               <Calendar className="h-3 w-3 mr-1" />
@@ -109,11 +110,12 @@ const VehicleDetails: React.FC<VehicleDetailsProps> = ({ vehicle, layout = "full
           />
         )}
         <div>
-          {vehicle.brand && vehicle.model && ( // Add conditional rendering
-            <h4 className="font-medium text-sm">
-              {vehicle.brand} {vehicle.model}
-            </h4>
-          )}
+          {vehicle.brand &&
+            vehicle.model && ( // Add conditional rendering
+              <h4 className="font-medium text-sm">
+                {vehicle.brand} {vehicle.model}
+              </h4>
+            )}
           {vehicle.price != null && ( // Check for null or undefined
             <div className="text-sm font-semibold text-green-600">
               <Euro className="h-4 w-4 inline-block mr-1" />

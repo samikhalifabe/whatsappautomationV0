@@ -95,17 +95,17 @@ export const useConversations = () => {
           setSelectedConversationUUID(dbChatGroups[0].id)
         }
       } else {
-         // Handle case where response.data or response.data.conversations is not as expected
-         setConversations([]);
-         setTotalPages(1);
-         setTotalConversations(0);
-         setError("Format de réponse API inattendu lors de la récupération des conversations.");
+        // Handle case where response.data or response.data.conversations is not as expected
+        setConversations([])
+        setTotalPages(1)
+        setTotalConversations(0)
+        setError("Format de réponse API inattendu lors de la récupération des conversations.")
       }
     } catch (err: any) {
       setError(`Impossible de récupérer les conversations de la base de données: ${err.message}`)
-      setConversations([]);
-      setTotalPages(1);
-      setTotalConversations(0);
+      setConversations([])
+      setTotalPages(1)
+      setTotalConversations(0)
     } finally {
       setLoadingDbConversations(false)
     }
@@ -194,16 +194,19 @@ export const useConversations = () => {
 
   // Pagination navigation functions
   const nextPage = useCallback(() => {
-    setPage(prev => Math.min(prev + 1, totalPages));
-  }, [totalPages]);
+    setPage((prev) => Math.min(prev + 1, totalPages))
+  }, [totalPages])
 
   const prevPage = useCallback(() => {
-    setPage(prev => Math.max(prev - 1, 1));
-  }, []);
+    setPage((prev) => Math.max(prev - 1, 1))
+  }, [])
 
-  const goToPage = useCallback((pageNum: number) => {
-    setPage(Math.max(1, Math.min(pageNum, totalPages)));
-  }, [totalPages]);
+  const goToPage = useCallback(
+    (pageNum: number) => {
+      setPage(Math.max(1, Math.min(pageNum, totalPages)))
+    },
+    [totalPages],
+  )
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationUUID)
 

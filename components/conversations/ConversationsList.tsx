@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, MessageCircle, Filter, Loader2 } from "lucide-react"
-import type { ChatGroup } from "../../types/conversations"
 import { useState, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { useConversations } from "@/hooks/useConversations"
@@ -52,39 +51,42 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
   }, [conversations, searchTerm, activeFilter])
 
   // Fonction pour gérer le changement de page avec scrollTo forcé
-  const handlePageChange = useCallback((action: 'prev' | 'next') => {
-    // Naviguer vers la page suivante/précédente
-    if (action === 'prev') {
-      prevPage();
-    } else {
-      nextPage();
-    }
-
-    // Forcer le scroll en haut de façon impérative avec un setTimeout
-    // pour s'assurer que l'exécution se fait après tout le reste
-    setTimeout(() => {
-      const scrollElement = document.getElementById('conversations-list-scroll');
-      if (scrollElement) {
-        // Approche 1: Utiliser scrollTop
-        scrollElement.scrollTop = 0;
-
-        // Approche 2: Utiliser scrollTo (au cas où scrollTop ne fonctionnerait pas)
-        scrollElement.scrollTo({
-          top: 0,
-          behavior: 'auto' // 'auto' au lieu de 'smooth' pour éviter les animations
-        });
-
-        // Approche 3: Utiliser scrollIntoView sur un élément en haut
-        const topAnchor = document.getElementById('conversations-top-anchor');
-        if (topAnchor) {
-          topAnchor.scrollIntoView({
-            block: 'start',
-            behavior: 'auto'
-          });
-        }
+  const handlePageChange = useCallback(
+    (action: "prev" | "next") => {
+      // Naviguer vers la page suivante/précédente
+      if (action === "prev") {
+        prevPage()
+      } else {
+        nextPage()
       }
-    }, 50); // Un délai de 50ms devrait être suffisant
-  }, [prevPage, nextPage]);
+
+      // Forcer le scroll en haut de façon impérative avec un setTimeout
+      // pour s'assurer que l'exécution se fait après tout le reste
+      setTimeout(() => {
+        const scrollElement = document.getElementById("conversations-list-scroll")
+        if (scrollElement) {
+          // Approche 1: Utiliser scrollTop
+          scrollElement.scrollTop = 0
+
+          // Approche 2: Utiliser scrollTo (au cas où scrollTop ne fonctionnerait pas)
+          scrollElement.scrollTo({
+            top: 0,
+            behavior: "auto", // 'auto' au lieu de 'smooth' pour éviter les animations
+          })
+
+          // Approche 3: Utiliser scrollIntoView sur un élément en haut
+          const topAnchor = document.getElementById("conversations-top-anchor")
+          if (topAnchor) {
+            topAnchor.scrollIntoView({
+              block: "start",
+              behavior: "auto",
+            })
+          }
+        }
+      }, 50) // Un délai de 50ms devrait être suffisant
+    },
+    [prevPage, nextPage],
+  )
 
   if (loadingDbConversations) {
     return (
@@ -151,7 +153,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
             className="max-h-[600px] overflow-y-auto"
           >
             {/* Élément d'ancrage pour scrollIntoView */}
-            <div id="conversations-top-anchor" style={{ height: 0, overflow: 'hidden' }}></div>
+            <div id="conversations-top-anchor" style={{ height: 0, overflow: "hidden" }}></div>
 
             {filteredConversations.map((chat) => (
               <ConversationItem
@@ -174,7 +176,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handlePageChange('prev')}
+            onClick={() => handlePageChange("prev")}
             disabled={page === 1 || loadingDbConversations}
           >
             Précédent
@@ -185,7 +187,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handlePageChange('next')}
+            onClick={() => handlePageChange("next")}
             disabled={page === totalPages || loadingDbConversations}
           >
             Suivant

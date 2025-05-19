@@ -68,7 +68,6 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, loadingMessa
     }
   }, [messages.length, loadingMessages])
 
-
   if (loadingMessages) {
     return (
       <div className="text-center text-muted-foreground flex-grow flex flex-col items-center justify-center p-8">
@@ -89,7 +88,9 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, loadingMessa
   }
 
   return (
-    <div className="flex flex-col space-y-3 p-4 flex-grow overflow-y-auto" ref={messageContainerRef}> {/* Attach ref here */}
+    <div className="flex flex-col space-y-3 p-4 flex-grow overflow-y-auto" ref={messageContainerRef}>
+      {" "}
+      {/* Attach ref here */}
       {messages.map((msg) => (
         <MessageItem
           key={msg.id} // Ensure unique key, might need to combine with message_id if id is not unique enough

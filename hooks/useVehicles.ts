@@ -15,52 +15,53 @@ export function useVehicles() {
 
   // Pagination state
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(1000) // Augmenter la taille de page
+  const [pageSize, setPageSize] = useState(30) // Limiter à 30 véhicules pour de meilleures performances
   const [totalCount, setTotalCount] = useState(0)
   const [hasMore, setHasMore] = useState(true)
 
-  const fetchVehicles = useCallback(async (pageToFetch = 1) => {
-    try {
-      setLoading(true)
-      setError(null)
+  const fetchVehicles = useCallback(
+    async (pageToFetch = 1) => {
+      try {
+        setLoading(true)
+        setError(null)
 
-      // First get the total count
-      const { count, error: countError } = await supabase
-        .from("vehicles")
-        .select("*", { count: "exact", head: true })
+        // First get the total count
+        const { count, error: countError } = await supabase.from("vehicles").select("*", { count: "exact", head: true })
 
-      if (countError) throw countError
-      setTotalCount(count || 0)
+        if (countError) throw countError
+        setTotalCount(count || 0)
 
-      // Then fetch the page
-      const from = (pageToFetch - 1) * pageSize
-      const to = from + pageSize - 1
+        // Then fetch the page
+        const from = (pageToFetch - 1) * pageSize
+        const to = from + pageSize - 1
 
-      const { data, error } = await supabase
-        .from("vehicles")
-        .select("*")
-        .range(from, to)
-        .order("created_at", { ascending: false })
+        const { data, error } = await supabase
+          .from("vehicles")
+          .select("*")
+          .range(from, to)
+          .order("created_at", { ascending: false })
 
-      if (error) throw error
+        if (error) throw error
 
-      if (pageToFetch === 1) {
-        setVehicles(data || [])
-      } else {
-        // Append to existing vehicles for continuous loading
-        setVehicles(prev => [...prev, ...(data || [])])
+        if (pageToFetch === 1) {
+          setVehicles(data || [])
+        } else {
+          // Append to existing vehicles for continuous loading
+          setVehicles((prev) => [...prev, ...(data || [])])
+        }
+
+        // Check if there are more vehicles to load
+        setHasMore((data?.length || 0) === pageSize)
+        setPage(pageToFetch)
+      } catch (err: any) {
+        console.error("Error fetching vehicles:", err)
+        setError(err.message)
+      } finally {
+        setLoading(false)
       }
-
-      // Check if there are more vehicles to load
-      setHasMore((data?.length || 0) === pageSize)
-      setPage(pageToFetch)
-    } catch (err: any) {
-      console.error("Error fetching vehicles:", err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [pageSize])
+    },
+    [pageSize],
+  )
 
   // Load more vehicles
   const loadMore = useCallback(() => {
@@ -68,7 +69,6 @@ export function useVehicles() {
       fetchVehicles(page + 1)
     }
   }, [fetchVehicles, page, hasMore, loading])
-
 
   async function getVehicleById(id: string) {
     try {

@@ -77,7 +77,7 @@ export default function MultiSender() {
     handleVehiclesSelected,
     handleTemplateSelected,
     sendMessages,
-  } = useMultiSender()
+  } = useMultiSender() // Removed getSelectedVehicles
 
   // Définir les sections disponibles
   const sections: Section[] = [
@@ -191,7 +191,7 @@ export default function MultiSender() {
       toast({
         title: "Mise à jour réussie",
         description: "Les statuts de contact des véhicules ont été mis à jour avec succès.",
-        variant: "success",
+        variant: "default",
         duration: 5000,
       })
       setTimeout(() => setUpdateSuccess(false), 3000)
@@ -220,8 +220,9 @@ export default function MultiSender() {
   }
 
   const handleRemoveVehicle = (vehicleId: string) => {
-    const updatedVehicles = vehicles.filter((v) => v.id !== vehicleId)
-    handleVehiclesSelected(updatedVehicles)
+    // Filter directly from the vehicles state provided by useMultiSender
+    const updatedVehicles = vehicles.filter((v: Vehicle) => v.id !== vehicleId); // Explicitly type 'v'
+    handleVehiclesSelected(updatedVehicles); // Update selected vehicles state in useMultiSender
 
     // Si le véhicule supprimé était celui utilisé pour la prévisualisation, sélectionner un autre
     if (selectedVehicleForPreview && selectedVehicleForPreview.id === vehicleId) {
@@ -887,7 +888,7 @@ export default function MultiSender() {
                   <div className="space-y-2 py-2">
                     {sendStatus.map((status, index) => (
                       <div
-                        key={index}
+                        key={`status-${status.contactNumber}-${index}`}
                         className={cn(
                           "flex items-center justify-between text-xs p-3 rounded-md border",
                           status.status === "success"
