@@ -212,6 +212,22 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = () => {
             />
           </div>
 
+          {/* Nouveau contrôle pour l'arrêt du bot sur offre de prix */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="pause-on-price">Mettre en pause le bot sur offre de prix</Label>
+              <p className="text-sm text-slate-500">
+                Si activé, le bot s'arrêtera de répondre automatiquement lorsqu'une offre de prix est détectée.
+              </p>
+            </div>
+            <Switch
+              id="pause-on-price"
+              checked={aiConfig.pauseBotOnPriceOffer}
+              onCheckedChange={(checked) => setAIConfig({ ...aiConfig, pauseBotOnPriceOffer: checked })}
+              disabled={!aiConfig.enabled}
+            />
+          </div>
+
           <div className="space-y-2 border-t pt-4 mt-4">
             <h3 className="font-medium">Délais de réponse</h3>
             <p className="text-sm text-slate-500 mb-4">Configurez les délais pour simuler un temps de réponse humain</p>
