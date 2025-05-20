@@ -46,7 +46,7 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = () => {
     try {
       setError(null)
       const response = await axios.get<{ success: boolean; config: AIConfig & { unavailabilityKeywords?: string[] } }>(
-        "http://localhost:3001/api/whatsapp/ai-config",
+        "http://localhost:3001/api/ai/config", // Updated endpoint URL
       )
       if (response.data.success && response.data.config) {
         const fetchedConfig = response.data.config
@@ -85,7 +85,7 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = () => {
       setUpdateSuccess(false)
       const payload = { ...aiConfig }
       console.log("Sending AI Config Payload:", payload)
-      const response = await axios.post("http://localhost:3001/api/whatsapp/ai-config", payload)
+      const response = await axios.post("http://localhost:3001/api/ai/config", payload) // Updated endpoint URL
 
       if (response.data.success) {
         setUpdateSuccess(true)
