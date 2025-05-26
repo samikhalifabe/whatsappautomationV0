@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,6 +12,25 @@ import { useAuth } from "@/hooks/useAuth"
 import { getConversations, getConversation, sendWhatsAppMessage } from "@/services/messageService"
 import { useWhatsApp } from "./WhatsAppContext"
 import type { FormattedConversation } from "../types/conversations"
+import { useWebSocket } from "@/hooks/useWebSocket"
+import { useMessages } from "@/hooks/useMessages"
+import type { Database } from "@/types/supabase"
+
+// Define types locally for now, to be centralized later
+type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"]
+interface AppMessage {
+  id: string
+  from: string
+  to: string
+  body: string
+  timestamp: number
+  isFromMe: boolean
+  chatName: string
+  chatId: string
+  conversation_id?: string
+  vehicle?: Vehicle | null
+  message_id?: string
+}
 
 const ConversationsView: React.FC = () => {
   const { user } = useAuth()
@@ -26,6 +45,60 @@ const ConversationsView: React.FC = () => {
   const [messageText, setMessageText] = useState<string>("")
   const [sendingMessage, setSendingMessage] = useState<boolean>(false)
   const [sendError, setSendError] = useState<string | null>(null)
+
+  // Handle new messages from WebSocket
+  const handleNewMessage = useCallback((message: AppMessage) => {
+    console.log("📩 New message received:", message)
+    
+    // Update conversations list
+    setConversations((prev) => {
+      const updated = prev.map((conv) => {
+        if (conv.id === message.conversation_id) {
+          return {
+            ...conv,
+            lastMessage: {
+              id: message.id,
+              body: message.body,
+              timestamp: message.timestamp,
+              isFromMe: message.isFromMe,
+            },
+            lastMessageAt: new Date(message.timestamp * 1000).toISOString(),
+          }
+        }
+        return conv
+      })
+      return updated
+    })
+
+    // Update selected conversation if it's the current one
+    if (selectedConversation?.id === message.conversation_id) {
+      setSelectedConversation((prev) => {
+        if (!prev) return null
+        return {
+          ...prev,
+          messages: [...prev.messages, {
+            id: message.id,
+            body: message.body,
+            timestamp: message.timestamp,
+            isFromMe: message.isFromMe,
+          }],
+          lastMessage: {
+            id: message.id,
+            body: message.body,
+            timestamp: message.timestamp,
+            isFromMe: message.isFromMe,
+          },
+          lastMessageAt: new Date(message.timestamp * 1000).toISOString(),
+        }
+      })
+    }
+  }, [selectedConversation?.id])
+
+  // Initialize WebSocket
+  const { socketConnected } = useWebSocket({
+    onNewMessage: handleNewMessage,
+    enabled: true,
+  })
 
   // Fetch conversations on component mount
   useEffect(() => {
@@ -234,7 +307,7 @@ const ConversationsView: React.FC = () => {
                         </div>
                       </div>
                       {conversation.lastMessage && (
-                        <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-1 mt-1">
+                        <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
                           {conversation.lastMessage.body}
                         </p>
                       )}

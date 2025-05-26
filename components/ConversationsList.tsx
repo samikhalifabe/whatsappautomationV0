@@ -284,9 +284,9 @@ const ConversationsList = () => {
                             <span className="truncate">{conv.vehicle.phone || "Pas de numéro"}</span>
                           </div>
                           {conv.lastMessage && (
-                            <p className="text-sm text-gray-600 mt-1 truncate">
+                            <p className="text-sm text-gray-600 mt-1">
                               {conv.lastMessage.contact_type.includes("reçu") ? "" : "Vous: "}
-                              {truncateText(conv.lastMessage.notes || "", 50)}
+                              {conv.lastMessage.notes || ""}
                             </p>
                           )}
                         </div>

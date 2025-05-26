@@ -75,6 +75,38 @@ export const useMessages = (
           }))
           fetchedMessages.sort((a, b) => a.timestamp - b.timestamp)
           setMessagesForSelectedChat(fetchedMessages)
+          
+          // Si aucun message n'est trouvé, essayer de synchroniser automatiquement
+          if (fetchedMessages.length === 0) {
+            console.log(`Aucun message trouvé pour la conversation ${conversationUUID}, tentative de synchronisation...`)
+            try {
+              const syncResponse = await axios.post(`http://localhost:3001/api/whatsapp/sync-conversation/${conversationUUID}`)
+              if (syncResponse.data.success && syncResponse.data.newMessagesSaved > 0) {
+                console.log(`Synchronisation réussie: ${syncResponse.data.newMessagesSaved} messages récupérés`)
+                // Recharger les messages après synchronisation
+                const retryResponse = await axios.get(`http://localhost:3001/api/conversations/${conversationUUID}`)
+                if (retryResponse.data && retryResponse.data.messages && Array.isArray(retryResponse.data.messages)) {
+                  const syncedMessages: AppMessage[] = retryResponse.data.messages.map((msg: any) => ({
+                    id: msg.message_id || msg.id,
+                    from: msg.is_from_me ? "me" : retryResponse.data.phoneNumber + "@c.us",
+                    to: msg.is_from_me ? retryResponse.data.phoneNumber + "@c.us" : "me",
+                    body: msg.body,
+                    timestamp: new Date(msg.timestamp).getTime() / 1000,
+                    isFromMe: msg.is_from_me,
+                    chatName: retryResponse.data.vehicle?.brand + " " + retryResponse.data.vehicle?.model || "Chat sans nom",
+                    chatId: retryResponse.data.chatId || retryResponse.data.id,
+                    conversation_id: retryResponse.data.id,
+                    vehicle: retryResponse.data.vehicle,
+                  }))
+                  syncedMessages.sort((a, b) => a.timestamp - b.timestamp)
+                  setMessagesForSelectedChat(syncedMessages)
+                }
+              }
+            } catch (syncError) {
+              console.warn("Erreur lors de la synchronisation automatique:", syncError)
+              // Ne pas bloquer l'affichage si la synchronisation échoue
+            }
+          }
         } else {
           setMessagesForSelectedChat([])
         }
@@ -186,14 +218,32 @@ export const useMessages = (
   // Function to add a new message received via WebSocket
   const addIncomingMessage = useCallback(
     (message: AppMessage) => {
+      console.log("🔍 addIncomingMessage called with:", JSON.stringify(message, null, 2))
+      console.log("🔍 selectedConversation:", selectedConversation)
+      console.log("🔍 selectedConversation.id:", selectedConversation?.id)
+      console.log("🔍 message.conversation_id:", message.conversation_id)
+      
       if (selectedConversation && message.conversation_id === selectedConversation.id) {
+        console.log("✅ Message belongs to selected conversation, adding to messages...")
         setMessagesForSelectedChat((prev) => {
+          console.log("🔍 Current messages count:", prev.length)
+          
           // Avoid duplicates
-          if (prev.some((m) => m.id === message.id || (m.message_id && m.message_id === message.message_id))) {
+          const isDuplicate = prev.some((m) => m.id === message.id || (m.message_id && m.message_id === message.message_id))
+          if (isDuplicate) {
+            console.log("⚠️ Duplicate message detected, skipping...")
             return prev
           }
-          return [...prev, message].sort((a, b) => a.timestamp - b.timestamp)
+          
+          const newMessages = [...prev, message].sort((a, b) => a.timestamp - b.timestamp)
+          console.log("✅ Message added! New messages count:", newMessages.length)
+          return newMessages
         })
+      } else {
+        console.log("❌ Message does not belong to selected conversation or no conversation selected")
+        console.log("❌ Condition check:")
+        console.log("   - selectedConversation exists:", !!selectedConversation)
+        console.log("   - message.conversation_id === selectedConversation.id:", message.conversation_id === selectedConversation?.id)
       }
     },
     [selectedConversation],

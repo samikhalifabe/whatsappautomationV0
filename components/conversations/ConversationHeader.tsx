@@ -21,10 +21,12 @@ import {
   ZoomIn,
   Calendar,
   MapPin,
+  RefreshCw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogClose } from "@/components/ui/dialog"
 import type { ChatGroup } from "../../types/conversations"
+import axios from "axios"
 
 interface ConversationHeaderProps {
   selectedConversation: ChatGroup | null | undefined
@@ -41,6 +43,7 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
 }) => {
   const [showStateMenu, setShowStateMenu] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
+  const [syncingHistory, setSyncingHistory] = useState(false)
 
   if (!selectedConversation) {
     return null
@@ -99,6 +102,28 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
     if (state !== newState) {
       onStateChange(newState)
       setShowStateMenu(false)
+    }
+  }
+
+  const handleSyncHistory = async () => {
+    if (!selectedConversation?.id) return
+
+    setSyncingHistory(true)
+    try {
+      console.log('Synchronisation de la conversation:', selectedConversation.id)
+      const response = await axios.post(`http://localhost:3001/api/whatsapp/sync-conversation/${selectedConversation.id}`)
+      
+      if (response.data.success) {
+        console.log('Synchronisation réussie:', response.data)
+        alert(`Synchronisation réussie: ${response.data.newMessagesSaved} nouveaux messages synchronisés`)
+        // Rafraîchir la page pour voir les nouveaux messages
+        window.location.reload()
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de la synchronisation:', error)
+      alert(`Erreur de synchronisation: ${error.response?.data?.error || "Impossible de synchroniser l'historique"}`)
+    } finally {
+      setSyncingHistory(false)
     }
   }
 
@@ -218,6 +243,23 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
 
             {/* Boutons d'action */}
             <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Bouton de synchronisation */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSyncHistory}
+                disabled={syncingHistory}
+                className="gap-1"
+                title="Synchroniser l'historique des messages depuis WhatsApp"
+              >
+                {syncingHistory ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">Sync</span>
+              </Button>
+
               {/* Bouton d'état */}
               <div className="relative">
                 <Button
