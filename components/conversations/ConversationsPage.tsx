@@ -56,17 +56,29 @@ export function ConversationsPage() {
   const [showAIConfig, setShowAIConfig] = useState<boolean>(false)
   const [loadingRecentConversations, setLoadingRecentConversations] = useState<boolean>(false)
 
-  // Récupérer les messages récents
+  // Récupérer les messages récents et synchroniser l'historique
   const fetchRecentConversations = async () => {
     try {
       setLoadingRecentConversations(true)
       setError(null)
-      console.log("Récupération des messages (limited fetch)...")
-      await axios.get("http://localhost:3001/api/messages")
+      console.log("Récupération et synchronisation des conversations...")
+      
+      // D'abord synchroniser l'historique de toutes les conversations
+      try {
+        const syncResponse = await axios.post("http://localhost:3001/api/whatsapp/sync-all-conversations")
+        if (syncResponse.data.success) {
+          console.log(`Synchronisation réussie: ${syncResponse.data.totalNewMessages} nouveaux messages synchronisés`)
+        }
+      } catch (syncError: any) {
+        console.warn("Erreur lors de la synchronisation (continuons quand même):", syncError)
+        // Ne pas arrêter le processus si la synchronisation échoue
+      }
+      
+      // Ensuite récupérer les conversations mises à jour
       await fetchDbConversations()
     } catch (err: any) {
-      console.error("Erreur lors de la récupération des messages :", err)
-      setError(`Impossible de récupérer les messages: ${err.message}`)
+      console.error("Erreur lors de la récupération des conversations :", err)
+      setError(`Impossible de récupérer les conversations: ${err.message}`)
     } finally {
       setLoadingRecentConversations(false)
     }
@@ -120,7 +132,7 @@ export function ConversationsPage() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Actualiser les conversations</p>
+                  <p>Actualiser et synchroniser l'historique des conversations</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

@@ -82,6 +82,14 @@ export const useConversations = () => {
         if (dbChatGroups.length > 0 && !selectedConversationUUID && page === 1) {
           setSelectedConversationUUID(dbChatGroups[0].id)
         }
+        
+        // Si une conversation est sélectionnée mais n'existe plus dans la page actuelle, sélectionner la première
+        if (selectedConversationUUID && dbChatGroups.length > 0) {
+          const conversationExists = dbChatGroups.some(conv => conv.id === selectedConversationUUID)
+          if (!conversationExists) {
+            setSelectedConversationUUID(dbChatGroups[0].id)
+          }
+        }
       } else {
         // Handle case where response.data or response.data.conversations is not as expected
         setConversations([])
@@ -183,15 +191,18 @@ export const useConversations = () => {
 
   // Pagination navigation functions
   const nextPage = useCallback(() => {
+    setSelectedConversationUUID(null) // Réinitialiser la sélection
     setPage((prev) => Math.min(prev + 1, totalPages))
   }, [totalPages])
 
   const prevPage = useCallback(() => {
+    setSelectedConversationUUID(null) // Réinitialiser la sélection
     setPage((prev) => Math.max(prev - 1, 1))
   }, [])
 
   const goToPage = useCallback(
     (pageNum: number) => {
+      setSelectedConversationUUID(null) // Réinitialiser la sélection
       setPage(Math.max(1, Math.min(pageNum, totalPages)))
     },
     [totalPages],
@@ -199,6 +210,11 @@ export const useConversations = () => {
 
   const foundConversation = conversations.find((c) => c.id === selectedConversationUUID);
   const selectedConversation = foundConversation === undefined ? null : foundConversation; // Explicitly set to null if not found
+  
+  // Debug logging
+  if (selectedConversationUUID && !foundConversation) {
+    console.warn(`Conversation sélectionnée ${selectedConversationUUID} non trouvée dans la page actuelle. Conversations disponibles:`, conversations.map(c => c.id))
+  }
 
   return {
     conversations,

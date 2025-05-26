@@ -764,7 +764,7 @@ export default function MultiSender() {
                         </div>
                         {message && (
                           <div className="mt-2 border rounded-md p-2 text-xs bg-slate-50 dark:bg-slate-800">
-                            <div className="line-clamp-4">{message}</div>
+                            <div>{message}</div>
                           </div>
                         )}
                       </CardContent>

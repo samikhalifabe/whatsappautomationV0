@@ -77,7 +77,7 @@ export function RecentConversations({ conversations }: RecentConversationsProps)
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground">
                       {conversation.lastMessage
                         ? `${conversation.lastMessage.isFromMe ? "Vous: " : ""}${conversation.lastMessage.body}`
                         : "Pas de messages récents"}

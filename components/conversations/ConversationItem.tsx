@@ -231,7 +231,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 
       {chat.lastMessage && (
         <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <p className="text-sm text-slate-800 dark:text-slate-100 line-clamp-2">
+          <p className="text-sm text-slate-800 dark:text-slate-100">
             {chat.lastMessage.isFromMe ? (
               <Badge variant="outline" className="mr-1 font-normal">
                 Vous

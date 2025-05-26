@@ -234,7 +234,7 @@ const ConversationsView: React.FC = () => {
                         </div>
                       </div>
                       {conversation.lastMessage && (
-                        <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-1 mt-1">
+                        <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
                           {conversation.lastMessage.body}
                         </p>
                       )}
