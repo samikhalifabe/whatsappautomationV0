@@ -39,7 +39,7 @@ export const useWebSocket = ({
     // Ne pas initialiser le WebSocket si enabled est false
     if (!enabled) {
       if (socketRef.current) {
-        console.log("WebSocket désactivé, fermeture de la connexion...")
+        console.log("🔌 WebSocket désactivé, fermeture de la connexion...")
         socketRef.current.disconnect()
         socketRef.current = null
         setSocketConnected(false)
@@ -49,38 +49,53 @@ export const useWebSocket = ({
 
     // Initialiser le WebSocket seulement s'il n'existe pas déjà
     if (!socketRef.current) {
-      console.log("Initializing WebSocket connection...")
+      console.log("🔌 Initializing WebSocket connection to:", socketUrl)
       socketRef.current = io(socketUrl)
 
       socketRef.current.on("connect", () => {
-        console.log("WebSocket connected!")
+        console.log("✅ WebSocket connected!")
+        console.log("🆔 Socket ID:", socketRef.current?.id)
         setSocketConnected(true)
       })
 
       socketRef.current.on("disconnect", () => {
-        console.log("WebSocket disconnected!")
+        console.log("❌ WebSocket disconnected!")
         setSocketConnected(false)
       })
 
       socketRef.current.on("connect_error", (error: any) => {
-        console.error("WebSocket connection error:", error)
+        console.error("❌ WebSocket connection error:", error)
         setSocketConnected(false)
       })
 
       socketRef.current.on("welcome", (data: any) => {
-        console.log("Welcome message received:", data)
+        console.log("👋 Welcome message received:", data)
       })
 
       socketRef.current.on("new_message", (message: AppMessage) => {
-        console.log("New message received via WebSocket:", message)
-        onNewMessage(message)
+        console.log("📩 NEW MESSAGE RECEIVED VIA WEBSOCKET:")
+        console.log("📩 Message type:", typeof message)
+        console.log("📩 Message content:", JSON.stringify(message, null, 2))
+        console.log("📩 Message ID:", message.id)
+        console.log("📩 From:", message.from)
+        console.log("📩 Body:", message.body)
+        console.log("📩 Conversation ID:", message.conversation_id)
+        console.log("📩 IsFromMe:", message.isFromMe)
+        console.log("📩 Calling onNewMessage callback...")
+        
+        try {
+          onNewMessage(message)
+          console.log("✅ onNewMessage callback executed successfully")
+        } catch (error) {
+          console.error("❌ Error in onNewMessage callback:", error)
+        }
       })
     }
 
     // Nettoyer la connexion WebSocket lors du démontage du composant
     return () => {
       if (socketRef.current) {
-        console.log("Closing WebSocket connection...")
+        console.log("🧹 Closing WebSocket connection...")
         socketRef.current.disconnect()
         socketRef.current = null
         setSocketConnected(false)
@@ -90,37 +105,46 @@ export const useWebSocket = ({
 
   // Fonction pour reconnecter manuellement le WebSocket
   const reconnect = () => {
+    console.log("🔄 Manual WebSocket reconnection...")
     if (socketRef.current) {
       socketRef.current.disconnect()
       socketRef.current = null
     }
 
     if (enabled) {
+      console.log("🔌 Reconnecting to:", socketUrl)
       socketRef.current = io(socketUrl)
 
       socketRef.current.on("connect", () => {
-        console.log("WebSocket reconnected!")
+        console.log("✅ WebSocket reconnected!")
         setSocketConnected(true)
       })
 
       // Réattacher tous les écouteurs d'événements
       socketRef.current.on("disconnect", () => {
-        console.log("WebSocket disconnected!")
+        console.log("❌ WebSocket disconnected!")
         setSocketConnected(false)
       })
 
       socketRef.current.on("connect_error", (error: any) => {
-        console.error("WebSocket connection error:", error)
+        console.error("❌ WebSocket connection error:", error)
         setSocketConnected(false)
       })
 
       socketRef.current.on("welcome", (data: any) => {
-        console.log("Welcome message received:", data)
+        console.log("👋 Welcome message received:", data)
       })
 
       socketRef.current.on("new_message", (message: AppMessage) => {
-        console.log("New message received via WebSocket:", message)
-        onNewMessage(message)
+        console.log("📩 NEW MESSAGE RECEIVED VIA WEBSOCKET (reconnected):")
+        console.log("📩 Message content:", JSON.stringify(message, null, 2))
+        
+        try {
+          onNewMessage(message)
+          console.log("✅ onNewMessage callback executed successfully")
+        } catch (error) {
+          console.error("❌ Error in onNewMessage callback:", error)
+        }
       })
     }
   }

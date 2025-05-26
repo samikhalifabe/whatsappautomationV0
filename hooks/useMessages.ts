@@ -218,14 +218,32 @@ export const useMessages = (
   // Function to add a new message received via WebSocket
   const addIncomingMessage = useCallback(
     (message: AppMessage) => {
+      console.log("🔍 addIncomingMessage called with:", JSON.stringify(message, null, 2))
+      console.log("🔍 selectedConversation:", selectedConversation)
+      console.log("🔍 selectedConversation.id:", selectedConversation?.id)
+      console.log("🔍 message.conversation_id:", message.conversation_id)
+      
       if (selectedConversation && message.conversation_id === selectedConversation.id) {
+        console.log("✅ Message belongs to selected conversation, adding to messages...")
         setMessagesForSelectedChat((prev) => {
+          console.log("🔍 Current messages count:", prev.length)
+          
           // Avoid duplicates
-          if (prev.some((m) => m.id === message.id || (m.message_id && m.message_id === message.message_id))) {
+          const isDuplicate = prev.some((m) => m.id === message.id || (m.message_id && m.message_id === message.message_id))
+          if (isDuplicate) {
+            console.log("⚠️ Duplicate message detected, skipping...")
             return prev
           }
-          return [...prev, message].sort((a, b) => a.timestamp - b.timestamp)
+          
+          const newMessages = [...prev, message].sort((a, b) => a.timestamp - b.timestamp)
+          console.log("✅ Message added! New messages count:", newMessages.length)
+          return newMessages
         })
+      } else {
+        console.log("❌ Message does not belong to selected conversation or no conversation selected")
+        console.log("❌ Condition check:")
+        console.log("   - selectedConversation exists:", !!selectedConversation)
+        console.log("   - message.conversation_id === selectedConversation.id:", message.conversation_id === selectedConversation?.id)
       }
     },
     [selectedConversation],
