@@ -30,8 +30,8 @@ export const WhatsAppProvider = ({ children }: { children: ReactNode }) => {
 
   const SERVER_URL = "http://localhost:3001"
 
-  // Augmenter l'intervalle à 30 secondes au lieu de 10
-  const REFRESH_INTERVAL = 30000
+  // Augmenter l'intervalle à 60 secondes au lieu de 30
+  const REFRESH_INTERVAL = 60000
 
   const refreshStatus = async () => {
     // Éviter les requêtes multiples si une est déjà en cours
@@ -40,7 +40,15 @@ export const WhatsAppProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsRefreshing(true)
       console.log("Vérification du statut WhatsApp...")
-      const response = await axios.get(`${SERVER_URL}/api/whatsapp/status`)
+      
+      // Ajouter un timeout pour éviter les requêtes qui traînent
+      const response = await axios.get(`${SERVER_URL}/api/whatsapp/status`, {
+        timeout: 5000,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      
       const data = response.data;
       console.log("Réponse complète du statut:", response)
       console.log("Statut reçu du backend:", data.status)
@@ -53,15 +61,10 @@ export const WhatsAppProvider = ({ children }: { children: ReactNode }) => {
       if (data.status === "disconnected") {
         fetchQrCode()
       }
-    } catch (error) { // Keep error type as implicit unknown
-      console.error("Erreur lors de la vérification du statut WhatsApp:", error)
-      // Log the error response if available using type assertion
-      if (axios.isAxiosError(error) && error.response) { // Use type guard for safety
-        console.error("Détails de l'erreur de réponse:", error.response.data);
-        console.error("Statut de l'erreur de réponse:", error.response.status);
-      }
-      setStatus("error")
-      console.log("Statut mis à jour en cas d'erreur:", "error")
+    } catch (error) {
+      console.warn("Erreur lors de la vérification du statut WhatsApp (non critique):", error)
+      // Ne pas changer le statut en "error" pour éviter de perturber l'UI
+      // setStatus("error")
       setLastChecked(new Date())
     } finally {
       setIsRefreshing(false)
